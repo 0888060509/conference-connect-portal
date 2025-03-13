@@ -9,6 +9,7 @@ import PrivateRoute from "@/components/auth/PrivateRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Bookings from "./pages/Bookings";
+import MyBookings from "./pages/MyBookings";
 import Rooms from "./pages/Rooms";
 import RoomDetail from "./pages/RoomDetail";
 import Calendar from "./pages/Calendar";
@@ -43,6 +44,7 @@ const App = () => (
                 <Route element={<PrivateRoute />}>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/bookings" element={<Bookings />} />
+                  <Route path="/my-bookings" element={<MyBookings />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/rooms" element={<Rooms />} />
                   <Route path="/rooms/:id" element={<RoomDetail />} />

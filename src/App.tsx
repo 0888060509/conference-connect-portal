@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
+import RoomAdmin from "./pages/RoomAdmin";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
                 {/* Admin-only routes */}
                 <Route element={<PrivateRoute requireAdmin={true} />}>
                   <Route path="/admin" element={<AdminPanel />} />
+                  <Route path="/admin/rooms" element={<RoomAdmin />} />
                 </Route>
               </>
             )}

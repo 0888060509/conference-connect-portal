@@ -172,7 +172,7 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
       event.recurrence = [rrule];
       
       // Store exception dates in extended properties
-      if (booking.recurrencePattern.exceptionDates?.length > 0) {
+      if ((booking.recurrencePattern as RecurrenceRule).exceptionDates?.length > 0) {
         if (!event.extendedProperties) {
           event.extendedProperties = { private: {} };
         }
@@ -180,7 +180,7 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
           event.extendedProperties.private = {};
         }
         event.extendedProperties.private.exceptionDates = JSON.stringify(
-          booking.recurrencePattern.exceptionDates
+          (booking.recurrencePattern as RecurrenceRule).exceptionDates
         );
       }
     } else if (typeof booking.recurrencePattern === 'string') {
@@ -260,7 +260,7 @@ export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking
     equipment,
     cateringRequested,
     isRecurring,
-    recurrencePattern
+    recurrencePattern: recurrencePattern as string | RecurrenceRule | undefined
   };
 };
 

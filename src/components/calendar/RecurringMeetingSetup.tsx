@@ -353,7 +353,7 @@ export function RecurringMeetingSetup({
     });
   };
 
-  const isDateInArray = (date: Date, dateArray: Date[]): boolean => {
+  const isDateInArray = (date: Date, dateArray: Date[]) => {
     return dateArray.some(d => isSameDay(d, date));
   };
 
@@ -675,9 +675,9 @@ export function RecurringMeetingSetup({
               }}
               className="pointer-events-auto"
               modifiers={{
-                conflict: (date) => isDateInArray(date, conflictDates),
-                exception: (date) => isDateInArray(date, recurrencePattern.exceptionDates),
-                blackout: (date) => isDateInArray(date, BLACKOUT_DATES),
+                conflict: (date: Date) => isDateInArray(date, conflictDates),
+                exception: (date: Date) => isDateInArray(date, recurrencePattern.exceptionDates),
+                blackout: (date: Date) => isDateInArray(date, BLACKOUT_DATES),
               }}
               modifiersClassNames={{
                 conflict: "bg-destructive/20 text-destructive-foreground border border-destructive",
@@ -837,3 +837,4 @@ export function RecurringMeetingSetup({
     </div>
   );
 }
+

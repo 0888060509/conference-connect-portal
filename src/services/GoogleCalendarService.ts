@@ -172,7 +172,7 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
       event.recurrence = [rrule];
       
       // Store exception dates in extended properties
-      if (booking.recurrencePattern.exceptionDates && booking.recurrencePattern.exceptionDates.length > 0) {
+      if (booking.recurrencePattern.exceptionDates?.length > 0) {
         if (!event.extendedProperties) {
           event.extendedProperties = { private: {} };
         }

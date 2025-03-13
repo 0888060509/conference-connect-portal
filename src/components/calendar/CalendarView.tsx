@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { format, addMonths, subMonths, addDays, subDays, addWeeks, subWeeks, isSameDay } from "date-fns";
 import { 
@@ -177,40 +178,26 @@ export function CalendarView() {
           </div>
 
           <div className="flex items-center gap-2">
-            <TabsList>
-              <TabsTrigger 
-                value="month" 
-                onClick={() => setSelectedView("month")}
-                className={selectedView === "month" ? "bg-muted" : ""}
-              >
-                <CalendarDays className="h-4 w-4 mr-1" />
-                Month
-              </TabsTrigger>
-              <TabsTrigger 
-                value="week" 
-                onClick={() => setSelectedView("week")}
-                className={selectedView === "week" ? "bg-muted" : ""}
-              >
-                <CalendarDays className="h-4 w-4 mr-1" />
-                Week
-              </TabsTrigger>
-              <TabsTrigger 
-                value="day" 
-                onClick={() => setSelectedView("day")}
-                className={selectedView === "day" ? "bg-muted" : ""}
-              >
-                <CalendarDays className="h-4 w-4 mr-1" />
-                Day
-              </TabsTrigger>
-              <TabsTrigger 
-                value="timeline" 
-                onClick={() => setSelectedView("timeline")}
-                className={selectedView === "timeline" ? "bg-muted" : ""}
-              >
-                <List className="h-4 w-4 mr-1" />
-                Timeline
-              </TabsTrigger>
-            </TabsList>
+            <Tabs value={selectedView} onValueChange={(value) => setSelectedView(value as any)}>
+              <TabsList>
+                <TabsTrigger value="month">
+                  <CalendarDays className="h-4 w-4 mr-1" />
+                  Month
+                </TabsTrigger>
+                <TabsTrigger value="week">
+                  <CalendarDays className="h-4 w-4 mr-1" />
+                  Week
+                </TabsTrigger>
+                <TabsTrigger value="day">
+                  <CalendarDays className="h-4 w-4 mr-1" />
+                  Day
+                </TabsTrigger>
+                <TabsTrigger value="timeline">
+                  <List className="h-4 w-4 mr-1" />
+                  Timeline
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 

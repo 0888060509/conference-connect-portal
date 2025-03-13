@@ -1,4 +1,3 @@
-
 import { Booking } from "@/components/bookings/PersonalBookings";
 
 // This is a mock service - in a real application, this would connect to the Google Calendar API
@@ -19,11 +18,18 @@ export interface GoogleCalendarEvent {
     email: string;
     responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted';
   }[];
+  recurrence?: string[];
+  extendedProperties?: {
+    private?: {
+      equipment?: string;
+      cateringRequested?: string;
+    };
+  };
 }
 
 // Convert a booking to a Google Calendar event
 export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEvent => {
-  return {
+  const event: GoogleCalendarEvent = {
     id: booking.id,
     summary: booking.title,
     description: booking.description,
@@ -38,10 +44,49 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
     },
     attendees: booking.attendees.map(email => ({ email })),
   };
+  
+  // Add recurrence if booking is recurring
+  if (booking.isRecurring && booking.recurrencePattern) {
+    event.recurrence = [`RRULE:FREQ=${booking.recurrencePattern.toUpperCase()}`];
+  }
+  
+  // Add extended properties for equipment and catering
+  if (booking.equipment || booking.cateringRequested !== undefined) {
+    event.extendedProperties = {
+      private: {}
+    };
+    
+    if (booking.equipment) {
+      event.extendedProperties.private!.equipment = booking.equipment.join(',');
+    }
+    
+    if (booking.cateringRequested !== undefined) {
+      event.extendedProperties.private!.cateringRequested = booking.cateringRequested.toString();
+    }
+  }
+  
+  return event;
 };
 
 // Convert a Google Calendar event to a booking
 export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking => {
+  // Parse equipment and catering from extended properties
+  const equipment = event.extendedProperties?.private?.equipment
+    ? event.extendedProperties.private.equipment.split(',')
+    : undefined;
+    
+  const cateringRequested = event.extendedProperties?.private?.cateringRequested
+    ? event.extendedProperties.private.cateringRequested === 'true'
+    : false;
+    
+  // Check if event has recurrence
+  const isRecurring = !!event.recurrence && event.recurrence.length > 0;
+  let recurrencePattern: string | undefined;
+  
+  if (isRecurring && event.recurrence[0].startsWith('RRULE:FREQ=')) {
+    recurrencePattern = event.recurrence[0].split('=')[1].toLowerCase();
+  }
+  
   return {
     id: event.id,
     title: event.summary,
@@ -53,6 +98,10 @@ export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking
     attendees: event.attendees.map(attendee => attendee.email),
     status: 'upcoming',
     createdBy: event.attendees[0]?.email,
+    equipment,
+    cateringRequested,
+    isRecurring,
+    recurrencePattern
   };
 };
 

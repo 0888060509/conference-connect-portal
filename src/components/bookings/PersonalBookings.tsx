@@ -29,6 +29,10 @@ export interface Booking {
   checkedOut?: boolean;
   checkedOutAt?: string;
   createdBy?: string;
+  equipment?: string[];
+  cateringRequested?: boolean;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
 }
 
 export type BookingStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
@@ -45,7 +49,10 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 1).setHours(11, 0, 0, 0)).toISOString(),
     attendees: ["john.doe@example.com", "jane.smith@example.com"],
     status: "upcoming",
-    createdBy: "john.doe@example.com"
+    createdBy: "john.doe@example.com",
+    equipment: ["Projector", "Whiteboard"],
+    cateringRequested: true,
+    isRecurring: false
   },
   {
     id: "2",
@@ -59,7 +66,10 @@ const SAMPLE_BOOKINGS: Booking[] = [
     status: "ongoing",
     checkedIn: true,
     checkedInAt: new Date(new Date().setHours(9, 0, 0, 0)).toISOString(),
-    createdBy: "mark.johnson@example.com"
+    createdBy: "mark.johnson@example.com",
+    equipment: ["Projector", "Laptops"],
+    cateringRequested: true,
+    isRecurring: false
   },
   {
     id: "3",
@@ -71,7 +81,10 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 2).setHours(12, 0, 0, 0)).toISOString(),
     attendees: ["sarah.jones@example.com", "david.williams@example.com"],
     status: "completed",
-    createdBy: "sarah.jones@example.com"
+    createdBy: "sarah.jones@example.com",
+    equipment: ["Whiteboard"],
+    cateringRequested: false,
+    isRecurring: false
   },
   {
     id: "4",
@@ -83,7 +96,10 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 3).setHours(16, 0, 0, 0)).toISOString(),
     attendees: ["emily.clark@example.com", "kevin.davis@example.com"],
     status: "upcoming",
-    createdBy: "emily.clark@example.com"
+    createdBy: "emily.clark@example.com",
+    equipment: ["Projector", "Sound System"],
+    cateringRequested: true,
+    isRecurring: false
   },
   {
     id: "5",
@@ -95,7 +111,9 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 7).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["all.employees@example.com"],
     status: "upcoming",
-    createdBy: "hr@example.com"
+    createdBy: "hr@example.com",
+    cateringRequested: true,
+    isRecurring: false
   },
   {
     id: "6",
@@ -107,7 +125,11 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 7).setHours(12, 0, 0, 0)).toISOString(),
     attendees: ["board.members@example.com"],
     status: "completed",
-    createdBy: "ceo@example.com"
+    createdBy: "ceo@example.com",
+    equipment: ["Projector", "Conference System"],
+    cateringRequested: true,
+    isRecurring: true,
+    recurrencePattern: "monthly"
   },
   {
     id: "7",
@@ -119,7 +141,10 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 2).setHours(15, 0, 0, 0)).toISOString(),
     attendees: ["product.team@example.com"],
     status: "upcoming",
-    createdBy: "product.manager@example.com"
+    createdBy: "product.manager@example.com",
+    equipment: ["Laptops", "Demo Equipment"],
+    cateringRequested: false,
+    isRecurring: false
   },
   {
     id: "8",
@@ -131,7 +156,11 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["hr.team@example.com"],
     status: "completed",
-    createdBy: "hr.director@example.com"
+    createdBy: "hr.director@example.com",
+    equipment: ["Projector"],
+    cateringRequested: true,
+    isRecurring: true,
+    recurrencePattern: "weekly"
   },
   {
     id: "9",
@@ -143,7 +172,10 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 4).setHours(14, 0, 0, 0)).toISOString(),
     attendees: ["customer1@example.com", "customer2@example.com"],
     status: "upcoming",
-    createdBy: "customer.success@example.com"
+    createdBy: "customer.success@example.com",
+    equipment: ["Whiteboard", "Laptops"],
+    cateringRequested: true,
+    isRecurring: false
   },
   {
     id: "10",
@@ -155,7 +187,9 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["hr.team@example.com"],
     status: "cancelled",
-    createdBy: "office.manager@example.com"
+    createdBy: "office.manager@example.com",
+    cateringRequested: false,
+    isRecurring: false
   },
 ];
 

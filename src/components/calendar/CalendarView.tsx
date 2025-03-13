@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { format, addMonths, subMonths, addDays, subDays, addWeeks, subWeeks, isSameDay } from "date-fns";
 import { 
@@ -39,7 +38,7 @@ const rooms = [
     location: "3rd Floor, Building A",
     capacity: 14,
     equipment: ["Video Conferencing", "Whiteboard", "Projector"],
-    availability: "available", // available, partial, booked
+    availability: "available" as const, // Using 'as const' to ensure type is "available"
   },
   {
     id: 2,
@@ -47,7 +46,7 @@ const rooms = [
     location: "2nd Floor, Building B",
     capacity: 8,
     equipment: ["Whiteboards", "LCD Screens", "Video Conferencing"],
-    availability: "partial", // available, partial, booked
+    availability: "partial" as const, // Using 'as const' to ensure type is "partial"
   },
   {
     id: 3,
@@ -55,7 +54,7 @@ const rooms = [
     location: "1st Floor, Building A",
     capacity: 20,
     equipment: ["Projector", "Video Conferencing"],
-    availability: "booked", // available, partial, booked
+    availability: "booked" as const, // Using 'as const' to ensure type is "booked"
   },
   {
     id: 4,
@@ -63,7 +62,7 @@ const rooms = [
     location: "4th Floor, Building C",
     capacity: 6,
     equipment: ["TV", "Whiteboard"],
-    availability: "available", // available, partial, booked
+    availability: "available" as const, // Using 'as const' to ensure type is "available"
   },
   {
     id: 5,
@@ -71,7 +70,7 @@ const rooms = [
     location: "4th Floor, Building C",
     capacity: 6,
     equipment: ["TV", "Whiteboard"],
-    availability: "partial", // available, partial, booked
+    availability: "partial" as const, // Using 'as const' to ensure type is "partial"
   },
 ];
 

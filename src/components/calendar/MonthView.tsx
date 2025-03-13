@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   format, 
@@ -34,25 +33,18 @@ export function MonthView({ currentDate, rooms, onSelectRoom }: MonthViewProps) 
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
 
   useEffect(() => {
-    // Get all days in the current month
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     
-    // Get the start of the week (Monday) of the first day of the month
     const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    
-    // Get the end of the week (Sunday) of the last day of the month
     const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
     
-    // Get all days between calendarStart and calendarEnd
     const allCalendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
     
     setCalendarDays(allCalendarDays);
   }, [currentDate]);
 
-  // Helper function to get color based on availability
   const getColorForRooms = (day: Date) => {
-    // For this demo, we'll just use the current availability status
     const availableCount = rooms.filter(room => room.availability === "available").length;
     const partialCount = rooms.filter(room => room.availability === "partial").length;
     const bookedCount = rooms.filter(room => room.availability === "booked").length;
@@ -62,14 +54,10 @@ export function MonthView({ currentDate, rooms, onSelectRoom }: MonthViewProps) 
     return "available";
   };
 
-  // Get status for a particular date
   const getRoomStatusForDate = (date: Date) => {
-    // For demo purposes, we're just using the current availability status
-    // In a real app, this would check bookings for the specific date
     return getColorForRooms(date);
   };
 
-  // Group the calendar days into weeks
   const weeks: Date[][] = [];
   for (let i = 0; i < calendarDays.length; i += 7) {
     weeks.push(calendarDays.slice(i, i + 7));
@@ -77,7 +65,6 @@ export function MonthView({ currentDate, rooms, onSelectRoom }: MonthViewProps) 
 
   return (
     <div className="w-full">
-      {/* Calendar Header - Days of Week */}
       <div className="grid grid-cols-7 text-center py-2 border-b bg-muted/20">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
           <div key={day} className="text-sm font-medium">
@@ -86,7 +73,6 @@ export function MonthView({ currentDate, rooms, onSelectRoom }: MonthViewProps) 
         ))}
       </div>
       
-      {/* Calendar Body */}
       <div>
         {weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7 border-b last:border-b-0">
@@ -142,7 +128,7 @@ export function MonthView({ currentDate, rooms, onSelectRoom }: MonthViewProps) 
                               <div className="text-xs text-muted-foreground">{room.location}</div>
                               <div className="text-xs">Capacity: {room.capacity} people</div>
                               <div className="flex items-center text-xs">
-                                Status: <RoomStatusIndicator status={room.availability} className="ml-1" />
+                                Status: <RoomStatusIndicator status={room.availability} />
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
                                 Click to book this room for {format(day, "MMM d, yyyy")}

@@ -55,24 +55,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for stored user on initial load
   useEffect(() => {
-    const storedUser = localStorage.getItem("meetingmaster_user");
-    const storedExpiry = localStorage.getItem("meetingmaster_session_expiry");
-    
-    if (storedUser && storedExpiry) {
-      const expiryTime = parseInt(storedExpiry, 10);
-      
-      // Check if session is still valid
-      if (expiryTime > Date.now()) {
-        setUser(JSON.parse(storedUser));
-        resetSessionTimeout();
-      } else {
-        // Session expired
-        localStorage.removeItem("meetingmaster_user");
-        localStorage.removeItem("meetingmaster_session_expiry");
+    const checkAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem("meetingmaster_user");
+        const storedExpiry = localStorage.getItem("meetingmaster_session_expiry");
+        
+        if (storedUser && storedExpiry) {
+          const expiryTime = parseInt(storedExpiry, 10);
+          
+          // Check if session is still valid
+          if (expiryTime > Date.now()) {
+            setUser(JSON.parse(storedUser));
+            resetSessionTimeout();
+          } else {
+            // Session expired
+            localStorage.removeItem("meetingmaster_user");
+            localStorage.removeItem("meetingmaster_session_expiry");
+          }
+        }
+      } catch (e) {
+        console.error("Auth initialization error:", e);
+      } finally {
+        // Ensure loading state is resolved
+        setIsLoading(false);
       }
-    }
+    };
     
-    setIsLoading(false);
+    // Simulate network delay to make loading state visible
+    setTimeout(checkAuth, 1000);
   }, []);
 
   // Set up activity listeners to reset session timeout

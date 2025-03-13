@@ -51,7 +51,7 @@ export const generateBookingConfirmationEmail = (booking: Booking, userName: str
       <p><strong>Location:</strong> ${booking.location}</p>
       <p><strong>Date:</strong> ${format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</p>
       <p><strong>Time:</strong> ${format(new Date(booking.start), "h:mm a")} - ${format(new Date(booking.end), "h:mm a")}</p>
-      <p><strong>Attendees:</strong> ${booking.attendees.map(a => a.name).join(", ")}</p>
+      <p><strong>Attendees:</strong> ${booking.attendees.join(", ")}</p>
     </div>
     
     <p>You can view and manage your booking through the Meeting Master app.</p>
@@ -124,7 +124,7 @@ export const generateBookingModificationEmail = (booking: Booking, userName: str
       <p><strong>Location:</strong> ${booking.location}</p>
       <p><strong>Date:</strong> ${format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</p>
       <p><strong>Time:</strong> ${format(new Date(booking.start), "h:mm a")} - ${format(new Date(booking.end), "h:mm a")}</p>
-      <p><strong>Attendees:</strong> ${booking.attendees.map(a => a.name).join(", ")}</p>
+      <p><strong>Attendees:</strong> ${booking.attendees.join(", ")}</p>
     </div>
     
     <a href="https://meetingmaster.app/bookings/${booking.id}" class="button">View Booking</a>
@@ -186,7 +186,7 @@ export const generateBookingConflictEmail = (
       <p><strong>Room:</strong> ${conflictingBooking.roomName}</p>
       <p><strong>Date:</strong> ${format(new Date(conflictingBooking.start), "EEEE, MMMM d, yyyy")}</p>
       <p><strong>Time:</strong> ${format(new Date(conflictingBooking.start), "h:mm a")} - ${format(new Date(conflictingBooking.end), "h:mm a")}</p>
-      <p><strong>Organizer:</strong> ${conflictingBooking.createdBy}</p>
+      <p><strong>Organizer:</strong> ${conflictingBooking.createdBy || 'Unknown'}</p>
     </div>
     
     <p>Please review and resolve this conflict as soon as possible.</p>

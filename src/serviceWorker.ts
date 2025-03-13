@@ -1,6 +1,13 @@
 
 // This service worker enables offline functionality
 
+// Define types for service worker
+declare global {
+  interface Window {
+    registration?: ServiceWorkerRegistration;
+  }
+}
+
 // Cache name
 const CACHE_NAME = 'meeting-master-v1';
 
@@ -88,7 +95,7 @@ self.addEventListener('push', (event: any) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    (self as any).registration.showNotification(data.title, options)
   );
 });
 
@@ -97,6 +104,8 @@ self.addEventListener('notificationclick', (event: any) => {
   event.notification.close();
   
   event.waitUntil(
-    clients.openWindow(event.notification.data.url)
+    (self as any).clients.openWindow(event.notification.data.url)
   );
 });
+
+export {};

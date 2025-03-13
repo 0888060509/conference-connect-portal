@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format, addDays, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -31,6 +32,7 @@ export interface Booking {
   cateringRequested?: boolean;
   isRecurring?: boolean;
   recurrencePattern?: string;
+  createdBy?: string;
 }
 
 export type BookingStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
@@ -74,7 +76,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Meeting Room B",
     location: "2nd Floor",
     start: subDays(new Date(), 2).toISOString(),
-    end: subDays(new Date(), 2).setHours(12, 0, 0, 0).toISOString(),
+    end: new Date(subDays(new Date(), 2).setHours(12, 0, 0, 0)).toISOString(),
     attendees: ["sarah.jones@example.com", "david.williams@example.com"],
     status: "completed",
   },
@@ -85,7 +87,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Presentation Hall",
     location: "1st Floor",
     start: addDays(new Date(), 3).toISOString(),
-    end: addDays(new Date(), 3).setHours(16, 0, 0, 0).toISOString(),
+    end: new Date(addDays(new Date(), 3).setHours(16, 0, 0, 0)).toISOString(),
     attendees: ["emily.clark@example.com", "kevin.davis@example.com"],
     status: "upcoming",
   },
@@ -96,7 +98,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Recreation Center",
     location: "Off-site",
     start: addDays(new Date(), 7).toISOString(),
-    end: addDays(new Date(), 7).setHours(17, 0, 0, 0).toISOString(),
+    end: new Date(addDays(new Date(), 7).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["all.employees@example.com"],
     status: "upcoming",
   },
@@ -107,7 +109,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Board Room",
     location: "4th Floor",
     start: subDays(new Date(), 7).toISOString(),
-    end: subDays(new Date(), 7).setHours(12, 0, 0, 0).toISOString(),
+    end: new Date(subDays(new Date(), 7).setHours(12, 0, 0, 0)).toISOString(),
     attendees: ["board.members@example.com"],
     status: "completed",
   },
@@ -118,7 +120,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Demo Room",
     location: "1st Floor",
     start: addDays(new Date(), 2).toISOString(),
-    end: addDays(new Date(), 2).setHours(15, 0, 0, 0).toISOString(),
+    end: new Date(addDays(new Date(), 2).setHours(15, 0, 0, 0)).toISOString(),
     attendees: ["product.team@example.com"],
     status: "upcoming",
   },
@@ -129,7 +131,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Training Room 2",
     location: "3rd Floor",
     start: subDays(new Date(), 1).toISOString(),
-    end: subDays(new Date(), 1).setHours(17, 0, 0, 0).toISOString(),
+    end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["hr.team@example.com"],
     status: "completed",
   },
@@ -140,7 +142,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Feedback Room",
     location: "2nd Floor",
     start: addDays(new Date(), 4).toISOString(),
-    end: addDays(new Date(), 4).setHours(14, 0, 0, 0).toISOString(),
+    end: new Date(addDays(new Date(), 4).setHours(14, 0, 0, 0)).toISOString(),
     attendees: ["customer1@example.com", "customer2@example.com"],
     status: "upcoming",
   },
@@ -151,7 +153,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Room 1",
     location: "3rd Floor",
     start: subDays(new Date(), 1).toISOString(),
-    end: subDays(new Date(), 1).setHours(17, 0, 0, 0).toISOString(),
+    end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["hr.team@example.com"],
     status: "cancelled",
   },

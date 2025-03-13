@@ -4,6 +4,13 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
+// Declare the registration property on the Window interface
+declare global {
+  interface Window {
+    registration?: ServiceWorkerRegistration;
+  }
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

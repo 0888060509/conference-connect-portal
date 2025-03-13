@@ -10,7 +10,8 @@ import {
   Menu, 
   X, 
   Home, 
-  BarChart 
+  BarChart,
+  CalendarDays
 } from "lucide-react";
 
 type NavItem = {
@@ -22,6 +23,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { icon: Home, label: "Dashboard", href: "/" },
   { icon: Calendar, label: "Bookings", href: "/bookings" },
+  { icon: CalendarDays, label: "Calendar", href: "/calendar" },
   { icon: Building, label: "Rooms", href: "/rooms" },
   { icon: Users, label: "Users", href: "/users" },
   { icon: BarChart, label: "Reports", href: "/reports" },

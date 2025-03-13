@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -58,6 +57,7 @@ import {
   Card,
   CardContent
 } from "@/components/ui/card";
+import { RecurringMeetingSetup, RecurrencePattern } from "@/components/calendar/RecurringMeetingSetup";
 
 // Sample data (would come from API in a real app)
 const rooms = [
@@ -128,6 +128,7 @@ const bookingFormSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurringType: z.enum(["daily", "weekly", "monthly"]).optional(),
   recurringEndDate: z.date().optional(),
+  recurrencePattern: z.any().optional(), // This will store our RecurrencePattern object
   equipment: z.array(z.string()).optional(),
   cateringRequired: z.boolean().default(false),
   cateringNotes: z.string().optional(),
@@ -158,11 +159,15 @@ export function BookingForm({ onClose }: { onClose?: () => void }) {
     },
   });
 
+  // Add state for recurrence pattern
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern | null>(null);
+  
   const watchIsRecurring = form.watch("isRecurring");
   const watchCateringRequired = form.watch("cateringRequired");
   const watchRoomId = form.watch("roomId");
   const selectedRoom = rooms.find(room => room.id === watchRoomId);
 
+  
   // Handle form submission
   const onSubmit = (data: BookingFormValues) => {
     // Simulate check for double booking
@@ -196,6 +201,14 @@ export function BookingForm({ onClose }: { onClose?: () => void }) {
     } else {
       setShowPreview(true);
     }
+
+    // If recurring, add the recurrence pattern
+    if (data.isRecurring && recurrencePattern) {
+      console.log("Recurrence Pattern:", recurrencePattern);
+      
+      // Add the recurrence pattern to the form data
+      data.recurrencePattern = recurrencePattern;
+    }
   };
   
   // Navigate between form steps
@@ -212,6 +225,12 @@ export function BookingForm({ onClose }: { onClose?: () => void }) {
     if (showPreview) {
       setShowPreview(false);
     }
+  };
+
+  // Handle recurrence pattern changes
+  const handleRecurrencePatternChange = (pattern: RecurrencePattern) => {
+    setRecurrencePattern(pattern);
+    form.setValue("recurrencePattern", pattern);
   };
 
   return (
@@ -495,91 +514,18 @@ export function BookingForm({ onClose }: { onClose?: () => void }) {
                   )}
                 />
 
-                {watchIsRecurring && (
-                  <div className="space-y-4 p-4 bg-muted/30 rounded-md">
-                    <FormField
-                      control={form.control}
-                      name="recurringType"
-                      render={({ field }) => (
-                        <FormItem className="space-y-3">
-                          <FormLabel>Recurrence Pattern</FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              className="flex flex-col space-y-1"
-                            >
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="daily" />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  Daily
-                                </FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="weekly" />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  Weekly
-                                </FormLabel>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="monthly" />
-                                </FormControl>
-                                <FormLabel className="font-normal">
-                                  Monthly
-                                </FormLabel>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="recurringEndDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>End Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className={cn(
-                                    "w-full justify-start text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {field.value ? format(field.value, "PPP") : <span>Select end date</span>}
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) => 
-                                  date < (form.getValues("date") || new Date())
-                                }
-                                initialFocus
-                                className="p-3 pointer-events-auto"
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
+                {/* Add our RecurringMeetingSetup component */}
+                <RecurringMeetingSetup
+                  startDate={form.getValues("date")}
+                  startTime={form.getValues("startTime") || ""}
+                  endTime={"18:00"} // This should be calculated based on start time + duration
+                  roomId={form.getValues("roomId") || ""}
+                  onPatternChange={handleRecurrencePatternChange}
+                  isEnabled={watchIsRecurring}
+                  existingBookings={[]} // In a real app, you'd fetch existing bookings
+                />
+
+                {/* Remove the old simple recurring options */}
               </div>
 
               <div className="flex justify-between">
@@ -592,7 +538,7 @@ export function BookingForm({ onClose }: { onClose?: () => void }) {
               </div>
             </TabsContent>
 
-            {/* Step 3: Requirements */}
+            {/* Step A3: Requirements */}
             <TabsContent value="step-3" className="mt-0 space-y-6">
               <div className="space-y-4">
                 <FormField
@@ -795,14 +741,20 @@ export function BookingForm({ onClose }: { onClose?: () => void }) {
                     </div>
                   )}
                   
-                  {watchIsRecurring && (
+                  {watchIsRecurring && recurrencePattern && (
                     <div className="pt-2 border-t">
                       <div className="text-sm font-medium mb-1">Recurrence</div>
                       <div className="flex items-center text-sm text-muted-foreground">
                         <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                        {form.getValues("recurringType")?.charAt(0).toUpperCase() + form.getValues("recurringType")?.slice(1) || ""}
-                        {form.getValues("recurringEndDate") && (
-                          <span> until {format(form.getValues("recurringEndDate"), "MMMM d, yyyy")}</span>
+                        {recurrencePattern.type.charAt(0).toUpperCase() + recurrencePattern.type.slice(1)}
+                        {recurrencePattern.endType === "afterDate" && recurrencePattern.endDate && (
+                          <span> until {format(recurrencePattern.endDate, "MMMM d, yyyy")}</span>
+                        )}
+                        {recurrencePattern.endType === "afterOccurrences" && recurrencePattern.occurrences && (
+                          <span> for {recurrencePattern.occurrences} occurrences</span>
+                        )}
+                        {recurrencePattern.exceptionDates.length > 0 && (
+                          <span> with {recurrencePattern.exceptionDates.length} exception(s)</span>
                         )}
                       </div>
                     </div>

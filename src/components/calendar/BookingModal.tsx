@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, Users, MapPin } from "lucide-react";
+import { Calendar, Clock, Users, MapPin, Repeat } from "lucide-react";
+import { RecurringMeetingSetup, RecurrencePattern } from "@/components/calendar/RecurringMeetingSetup";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -36,6 +38,8 @@ export function BookingModal({
   const [selectedStartTime, setSelectedStartTime] = useState(startTime);
   const [selectedEndTime, setSelectedEndTime] = useState(endTime);
   const [attendees, setAttendees] = useState("");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern | null>(null);
 
   const timeOptions = [
     "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -53,16 +57,22 @@ export function BookingModal({
       endTime: selectedEndTime,
       title: bookingTitle,
       description: bookingDescription,
-      attendees: attendees.split(",").map(a => a.trim())
+      attendees: attendees.split(",").map(a => a.trim()),
+      isRecurring,
+      recurrencePattern
     });
     
     // Close the modal
     onClose();
   };
 
+  const handleRecurrencePatternChange = (pattern: RecurrencePattern) => {
+    setRecurrencePattern(pattern);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Book Meeting Room</DialogTitle>
         </DialogHeader>
@@ -160,6 +170,28 @@ export function BookingModal({
               onChange={(e) => setAttendees(e.target.value)}
             />
           </div>
+          
+          <div className="flex items-center space-x-3 pt-2">
+            <Switch
+              checked={isRecurring}
+              onCheckedChange={setIsRecurring}
+              id="recurring"
+            />
+            <Label htmlFor="recurring" className="flex items-center cursor-pointer">
+              <Repeat className="h-4 w-4 mr-2" />
+              Set up recurring meeting
+            </Label>
+          </div>
+          
+          <RecurringMeetingSetup
+            startDate={date}
+            startTime={selectedStartTime}
+            endTime={selectedEndTime}
+            roomId={room.id.toString()}
+            onPatternChange={handleRecurrencePatternChange}
+            isEnabled={isRecurring}
+            existingBookings={[]} // In a real app, you'd fetch existing bookings
+          />
           
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

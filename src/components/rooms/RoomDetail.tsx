@@ -128,38 +128,36 @@ export function RoomDetail() {
 
       <Card>
         <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Availability</CardTitle>
+            <TabsList>
+              <TabsTrigger value="daily">Daily</TabsTrigger>
+              <TabsTrigger value="weekly">Weekly</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
+            </TabsList>
+          </div>
+        </CardHeader>
+        <CardContent>
           <Tabs defaultValue="weekly">
-            <div className="flex justify-between items-center">
-              <CardTitle>Availability</CardTitle>
-              <TabsList>
-                <TabsTrigger value="daily">Daily</TabsTrigger>
-                <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              </TabsList>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="weekly">
-              <TabsContent value="daily" className="mt-0">
-                <div className="text-center p-6 text-muted-foreground">
-                  Daily availability view will be shown here
+            <TabsContent value="daily" className="mt-0">
+              <div className="text-center p-6 text-muted-foreground">
+                Daily availability view will be shown here
+              </div>
+            </TabsContent>
+            <TabsContent value="weekly" className="mt-0">
+              <div className="h-64 overflow-hidden flex items-center justify-center bg-muted/20 rounded-md">
+                <div className="text-center text-muted-foreground">
+                  Weekly calendar view will be displayed here
                 </div>
-              </TabsContent>
-              <TabsContent value="weekly" className="mt-0">
-                <div className="h-64 overflow-hidden flex items-center justify-center bg-muted/20 rounded-md">
-                  <div className="text-center text-muted-foreground">
-                    Weekly calendar view will be displayed here
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="monthly" className="mt-0">
-                <div className="text-center p-6 text-muted-foreground">
-                  Monthly availability view will be shown here
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+              </div>
+            </TabsContent>
+            <TabsContent value="monthly" className="mt-0">
+              <div className="text-center p-6 text-muted-foreground">
+                Monthly availability view will be shown here
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
       </Card>
     </div>
   );

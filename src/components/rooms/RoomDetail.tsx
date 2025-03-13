@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Users, Monitor, Wifi, MapPin, Clock } from "lucide-react";
+import { useState } from "react";
+import { BookingModal } from "@/components/calendar/BookingModal";
 
 // Sample room data
 const room = {
@@ -38,6 +40,9 @@ const room = {
 };
 
 export function RoomDetail() {
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("weekly");
+  
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -49,8 +54,8 @@ export function RoomDetail() {
           </div>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline">Check Availability</Button>
-          <Button className="bg-secondary hover:bg-secondary-light">Book Now</Button>
+          <Button variant="outline" onClick={() => setBookingModalOpen(true)}>Check Availability</Button>
+          <Button className="bg-secondary hover:bg-secondary-light" onClick={() => setBookingModalOpen(true)}>Book Now</Button>
         </div>
       </div>
 
@@ -130,15 +135,17 @@ export function RoomDetail() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Availability</CardTitle>
-            <TabsList>
-              <TabsTrigger value="daily">Daily</TabsTrigger>
-              <TabsTrigger value="weekly">Weekly</TabsTrigger>
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-            </TabsList>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="daily">Daily</TabsTrigger>
+                <TabsTrigger value="weekly">Weekly</TabsTrigger>
+                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="weekly">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsContent value="daily" className="mt-0">
               <div className="text-center p-6 text-muted-foreground">
                 Daily availability view will be shown here
@@ -159,6 +166,14 @@ export function RoomDetail() {
           </Tabs>
         </CardContent>
       </Card>
+      
+      {/* Booking Modal */}
+      <BookingModal
+        isOpen={bookingModalOpen}
+        onClose={() => setBookingModalOpen(false)}
+        room={room}
+        date={new Date()}
+      />
     </div>
   );
 }

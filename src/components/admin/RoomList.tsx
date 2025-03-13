@@ -241,7 +241,6 @@ export function RoomList() {
               <TableHead className="w-12">
                 <Checkbox 
                   checked={selectedRooms.length === filteredRooms.length && filteredRooms.length > 0} 
-                  indeterminate={selectedRooms.length > 0 && selectedRooms.length < filteredRooms.length}
                   onCheckedChange={handleSelectAll}
                   aria-label="Select all rooms"
                 />
@@ -318,7 +317,7 @@ export function RoomList() {
                   <TableCell>{room.location}</TableCell>
                   <TableCell>{room.capacity}</TableCell>
                   <TableCell>
-                    <Badge variant={room.available ? "success" : "destructive"}>
+                    <Badge variant={room.available ? "secondary" : "destructive"}>
                       {room.available ? "Available" : "Unavailable"}
                     </Badge>
                   </TableCell>

@@ -1,11 +1,22 @@
 
-import { useState } from "react";
-import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay } from "date-fns";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState } from "react";
+import { Calendar, Views, dateFnsLocalizer } from "react-big-calendar";
+import { format, parse, startOfWeek, getDay } from "date-fns";
+import { enUS } from "date-fns/locale";
 import { Booking } from "./PersonalBookings";
-import { BookingDetails } from "./BookingDetails";
+
+// Setup localizer for react-big-calendar
+const locales = {
+  "en-US": enUS,
+};
+
+const localizer = dateFnsLocalizer({
+  format,
+  parse,
+  startOfWeek,
+  getDay,
+  locales,
+});
 
 interface BookingsCalendarProps {
   bookings: Booking[];
@@ -26,144 +37,151 @@ export function BookingsCalendar({
   onShare,
   onSetReminder,
 }: BookingsCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-  
-  // Generate week days
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
-  
-  // Hours to display (8 AM to 7 PM)
-  const hours = Array.from({ length: 12 }, (_, i) => i + 8);
-  
-  const previousWeek = () => {
-    setCurrentDate(prevDate => addDays(prevDate, -7));
-  };
-  
-  const nextWeek = () => {
-    setCurrentDate(prevDate => addDays(prevDate, 7));
-  };
-  
-  const today = () => {
-    setCurrentDate(new Date());
-  };
-  
-  const getBookingsForDateAndHour = (date: Date, hour: number) => {
-    return bookings.filter(booking => {
-      const bookingDate = new Date(booking.start);
-      return (
-        isSameDay(bookingDate, date) &&
-        bookingDate.getHours() <= hour &&
-        new Date(booking.end).getHours() > hour
-      );
-    });
-  };
-  
-  // Status color mapping
-  const getStatusColor = (status: Booking['status']) => {
-    switch (status) {
-      case 'upcoming': return 'bg-blue-100 border-blue-300 text-blue-700';
-      case 'ongoing': return 'bg-green-100 border-green-300 text-green-700';
-      case 'completed': return 'bg-gray-100 border-gray-300 text-gray-700';
-      case 'cancelled': return 'bg-red-100 border-red-300 text-red-700';
-      default: return 'bg-gray-100 border-gray-300 text-gray-700';
+  const [view, setView] = useState<string>('month');
+  const [date, setDate] = useState<Date>(new Date());
+
+  // Prepare events for react-big-calendar
+  const events = bookings.map((booking) => ({
+    id: booking.id,
+    title: booking.title,
+    start: new Date(booking.start),
+    end: new Date(booking.end),
+    resource: booking,
+  }));
+
+  // Event styling based on booking status
+  const eventStyleGetter = (event: any) => {
+    const booking = event.resource as Booking;
+    let style: React.CSSProperties = {
+      borderRadius: '4px',
+      opacity: 0.8,
+      color: 'white',
+      border: '0',
+      display: 'block',
+    };
+
+    switch (booking.status) {
+      case 'upcoming':
+        style.backgroundColor = '#3182ce'; // blue
+        break;
+      case 'ongoing':
+        style.backgroundColor = '#38a169'; // green
+        break;
+      case 'completed':
+        style.backgroundColor = '#718096'; // gray
+        break;
+      case 'cancelled':
+        style.backgroundColor = '#e53e3e'; // red
+        style.textDecoration = 'line-through';
+        break;
+      default:
+        style.backgroundColor = '#3182ce'; // default blue
     }
+
+    return {
+      style,
+    };
+  };
+
+  // Handle booking click
+  const handleSelectEvent = (event: any) => {
+    const booking = event.resource as Booking;
+    console.log('Selected booking:', booking);
+    // Here you could open a detail modal, etc.
+  };
+
+  // Custom toolbar component
+  const CustomToolbar = ({ label, onView, onNavigate, views }: any) => {
+    return (
+      <div className="flex justify-between items-center p-4 border-b">
+        <div>
+          <span className="text-lg font-semibold">{label}</span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigate('TODAY')}
+            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('PREV')}
+            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('NEXT')}
+            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+          >
+            Next
+          </button>
+        </div>
+        <div className="flex gap-2">
+          {views.map((name: string) => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => onView(name)}
+              className={`px-3 py-1 rounded text-sm ${
+                view === name ? 'bg-primary text-white' : 'bg-gray-200 hover:bg-gray-300'
+              }`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Handle event prop propagation for each callback function
+  const handleCancel = (bookingId: string, reason: string) => {
+    onCancel(bookingId, reason);
+  };
+
+  const handleCheckIn = (bookingId: string) => {
+    onCheckIn(bookingId);
+  };
+
+  const handleCheckOut = (bookingId: string) => {
+    onCheckOut(bookingId);
+  };
+
+  const handleDuplicate = (bookingId: string) => {
+    onDuplicate(bookingId);
+  };
+
+  const handleShare = (bookingId: string, method: 'email' | 'calendar') => {
+    onShare(bookingId, method);
+  };
+
+  const handleSetReminder = (bookingId: string, minutes: number) => {
+    onSetReminder(bookingId, minutes);
   };
 
   return (
-    <>
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <div className="text-lg font-medium">
-            {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={today}>
-              Today
-            </Button>
-            <Button variant="outline" size="icon" onClick={previousWeek}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={nextWeek}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <div className="min-w-[800px]">
-            {/* Calendar Header */}
-            <div className="grid grid-cols-[6rem_repeat(7,1fr)] border-b">
-              <div className="p-2 font-medium text-muted-foreground">
-                Time / Day
-              </div>
-              {weekDays.map((day, i) => (
-                <div key={i} className="p-2 text-center font-medium">
-                  <div>{format(day, "EEE")}</div>
-                  <div className={`text-sm ${isSameDay(day, new Date()) ? "font-bold" : ""}`}>
-                    {format(day, "MMM d")}
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* Calendar Body */}
-            <div>
-              {hours.map((hour) => (
-                <div key={hour} className="grid grid-cols-[6rem_repeat(7,1fr)] border-b last:border-b-0">
-                  <div className="p-2 text-muted-foreground text-sm">
-                    {hour === 12 ? "12 PM" : hour < 12 ? `${hour} AM` : `${hour - 12} PM`}
-                  </div>
-                  
-                  {weekDays.map((day, dayIndex) => {
-                    const dayBookings = getBookingsForDateAndHour(day, hour);
-                    
-                    return (
-                      <div key={dayIndex} className="h-20 border-r last:border-r-0 relative">
-                        {dayBookings.length > 0 ? (
-                          <div className="p-1 h-full">
-                            {dayBookings.map(booking => (
-                              <div
-                                key={booking.id}
-                                className={`
-                                  h-full overflow-hidden rounded-sm p-1 text-xs cursor-pointer border
-                                  ${getStatusColor(booking.status)}
-                                `}
-                                onClick={() => setSelectedBookingId(booking.id)}
-                              >
-                                <div className="font-medium truncate">{booking.title}</div>
-                                <div className="truncate">{booking.roomName}</div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="h-full w-full hover:bg-muted/20"></div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Booking Details Dialog */}
-      {selectedBookingId && (
-        <BookingDetails
-          bookingId={selectedBookingId}
-          bookings={bookings}
-          onClose={() => setSelectedBookingId(null)}
-          onCancel={onCancel}
-          onCheckIn={onCheckIn}
-          onCheckOut={onCheckOut}
-          onDuplicate={onDuplicate}
-          onShare={onShare}
-          onSetReminder={onSetReminder}
-        />
-      )}
-    </>
+    <div className="h-[600px]">
+      <Calendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        style={{ height: '100%' }}
+        views={['month', 'week', 'day', 'agenda']}
+        view={view as Views}
+        date={date}
+        onView={(newView) => setView(newView)}
+        onNavigate={(newDate) => setDate(newDate)}
+        eventPropGetter={eventStyleGetter}
+        onSelectEvent={handleSelectEvent}
+        components={{
+          toolbar: CustomToolbar,
+        }}
+      />
+    </div>
   );
 }

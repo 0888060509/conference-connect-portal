@@ -7,6 +7,19 @@ import { BookingFilters } from "./BookingFilters";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { CalendarRange, List, Plus } from "lucide-react";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { 
+  generateBookingConfirmationEmail,
+  generateBookingCancellationEmail,
+  generateBookingModificationEmail,
+  generateReminderEmail
+} from "@/utils/emailTemplates";
+import { 
+  sendEmailNotification, 
+  sendCalendarInvite,
+  sendPushNotification,
+  scheduleReminder
+} from "@/services/NotificationService";
 
 // Booking status types
 export type BookingStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
@@ -66,8 +79,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 2,
     roomName: "Meeting Room 101",
     location: "Floor 2",
-    start: new Date(new Date().setDate(new Date().getDate() + 1)).setHours(14, 0, 0, 0),
-    end: new Date(new Date().setDate(new Date().getDate() + 1)).setHours(15, 30, 0, 0),
+    start: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(14, 0, 0, 0)),
+    end: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(15, 30, 0, 0)),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "4", name: "Michael Johnson", email: "michael@example.com" },
@@ -87,8 +100,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 3,
     roomName: "Executive Boardroom",
     location: "Floor 5",
-    start: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(9, 0, 0, 0),
-    end: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 0, 0, 0),
+    start: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(9, 0, 0, 0)),
+    end: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 0, 0, 0)),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "6", name: "David Brown", email: "david@example.com" },
@@ -100,9 +113,9 @@ const MOCK_BOOKINGS: Booking[] = [
     createdBy: "You",
     createdAt: new Date(new Date().setDate(new Date().getDate() - 9)),
     checkedIn: true,
-    checkedInAt: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(8, 55, 0, 0),
+    checkedInAt: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(8, 55, 0, 0)),
     checkedOut: true,
-    checkedOutAt: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 5, 0, 0),
+    checkedOutAt: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 5, 0, 0)),
   },
   {
     id: "bk-004",
@@ -111,8 +124,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 4,
     roomName: "Meeting Room 102",
     location: "Floor 2",
-    start: new Date(new Date().setDate(new Date().getDate() - 1)).setHours(13, 0, 0, 0),
-    end: new Date(new Date().setDate(new Date().getDate() - 1)).setHours(14, 0, 0, 0),
+    start: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(13, 0, 0, 0)),
+    end: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(14, 0, 0, 0)),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "7", name: "Emma Wilson", email: "emma@example.com" },
@@ -137,6 +150,7 @@ export function PersonalBookings() {
   });
   
   const { toast } = useToast();
+  const { sendNotification } = useNotifications();
 
   const handleCreateBooking = () => {
     // This would typically open a modal or navigate to the booking creation page
@@ -146,7 +160,11 @@ export function PersonalBookings() {
     });
   };
 
-  const handleCancelBooking = (bookingId: string, reason?: string) => {
+  const handleCancelBooking = async (bookingId: string, reason?: string) => {
+    // Find the booking to cancel
+    const bookingToCancel = bookings.find(b => b.id === bookingId);
+    if (!bookingToCancel) return;
+    
     // Update booking status to cancelled
     const updatedBookings = bookings.map(booking => 
       booking.id === bookingId 
@@ -157,13 +175,37 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
+    // Send in-app notification
+    await sendNotification(
+      'booking_cancellation',
+      'Booking Cancelled', 
+      `Your booking for ${bookingToCancel.title} has been cancelled.`,
+      ['in_app', 'email'],
+      '/my-bookings',
+      bookingId
+    );
+    
+    // Send email notification
+    const emailTemplate = generateBookingCancellationEmail(bookingToCancel, "You", reason);
+    
+    // In a real app, this would use the actual user's email
+    await sendEmailNotification(
+      "you@example.com",
+      emailTemplate.subject,
+      emailTemplate.body
+    );
+    
     toast({
       title: "Booking Cancelled",
       description: reason ? `Booking has been cancelled. Reason: ${reason}` : "Booking has been cancelled.",
     });
   };
 
-  const handleCheckIn = (bookingId: string) => {
+  const handleCheckIn = async (bookingId: string) => {
+    // Find the booking to check in
+    const bookingToCheckIn = bookings.find(b => b.id === bookingId);
+    if (!bookingToCheckIn) return;
+    
     // Update booking check-in status
     const updatedBookings = bookings.map(booking => 
       booking.id === bookingId 
@@ -179,13 +221,27 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
+    // Send notification
+    await sendNotification(
+      'booking_modification',
+      'Checked In to Meeting', 
+      `You have successfully checked in to ${bookingToCheckIn.title} in ${bookingToCheckIn.roomName}.`,
+      ['in_app'],
+      '/my-bookings',
+      bookingId
+    );
+    
     toast({
       title: "Checked In",
       description: "You have successfully checked in to your booking",
     });
   };
 
-  const handleCheckOut = (bookingId: string) => {
+  const handleCheckOut = async (bookingId: string) => {
+    // Find the booking to check out
+    const bookingToCheckOut = bookings.find(b => b.id === bookingId);
+    if (!bookingToCheckOut) return;
+    
     // Update booking check-out status
     const updatedBookings = bookings.map(booking => 
       booking.id === bookingId 
@@ -201,13 +257,23 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
+    // Send notification
+    await sendNotification(
+      'booking_modification',
+      'Checked Out from Meeting', 
+      `You have successfully checked out from ${bookingToCheckOut.title} in ${bookingToCheckOut.roomName}.`,
+      ['in_app'],
+      '/my-bookings',
+      bookingId
+    );
+    
     toast({
       title: "Checked Out",
       description: "You have successfully checked out from your booking",
     });
   };
 
-  const handleDuplicateBooking = (bookingId: string) => {
+  const handleDuplicateBooking = async (bookingId: string) => {
     // Find the booking to duplicate
     const bookingToDuplicate = bookings.find(b => b.id === bookingId);
     
@@ -228,9 +294,11 @@ export function PersonalBookings() {
     const newEndDate = new Date(nextWeekDate);
     newEndDate.setHours(endHours, endMinutes, 0, 0);
     
+    const newBookingId = `bk-${Date.now()}`;
+    
     const newBooking: Booking = {
       ...bookingToDuplicate,
-      id: `bk-${Date.now()}`, // Generate a new ID
+      id: newBookingId,
       start: newStartDate,
       end: newEndDate,
       status: 'upcoming',
@@ -245,22 +313,110 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
+    // Send notification
+    await sendNotification(
+      'booking_confirmation',
+      'Booking Duplicated', 
+      `A new booking has been created based on ${bookingToDuplicate.title}.`,
+      ['in_app', 'email', 'calendar'],
+      '/my-bookings',
+      newBookingId
+    );
+    
+    // Send email notification
+    const emailTemplate = generateBookingConfirmationEmail(newBooking, "You");
+    
+    // In a real app, this would use the actual user's email
+    await sendEmailNotification(
+      "you@example.com",
+      emailTemplate.subject,
+      emailTemplate.body
+    );
+    
+    // Add to calendar
+    await sendCalendarInvite(
+      newBooking,
+      newBooking.attendees.map(a => a.email),
+      "you@example.com"
+    );
+    
     toast({
       title: "Booking Duplicated",
       description: "A new booking has been created based on the selected booking",
     });
   };
 
-  const handleShareBooking = (bookingId: string, method: 'email' | 'calendar') => {
-    // This would typically integrate with email or calendar services
+  const handleShareBooking = async (bookingId: string, method: 'email' | 'calendar') => {
+    // Find the booking to share
+    const bookingToShare = bookings.find(b => b.id === bookingId);
+    if (!bookingToShare) return;
+    
+    if (method === 'email') {
+      // In a real app, this would show a dialog to select recipients
+      const emailTemplate = generateBookingConfirmationEmail(bookingToShare, "Colleague");
+      
+      // Mock sending to a colleague
+      await sendEmailNotification(
+        "colleague@example.com",
+        emailTemplate.subject,
+        emailTemplate.body
+      );
+    } else if (method === 'calendar') {
+      // In a real app, this would allow selecting calendar type
+      await sendCalendarInvite(
+        bookingToShare,
+        bookingToShare.attendees.map(a => a.email),
+        "you@example.com"
+      );
+    }
+    
     toast({
       title: `Booking Shared via ${method === 'email' ? 'Email' : 'Calendar Invitation'}`,
       description: "Booking details have been shared",
     });
   };
 
-  const handleSetReminder = (bookingId: string, minutes?: number) => {
+  const handleSetReminder = async (bookingId: string, minutes?: number) => {
+    // Find the booking to set reminder for
+    const bookingToRemind = bookings.find(b => b.id === bookingId);
+    if (!bookingToRemind) return;
+    
     const reminderMin = minutes || 15; // Default to 15 minutes if not specified
+    
+    // Calculate when the reminder should be sent
+    const reminderTime = new Date(bookingToRemind.start.getTime() - (reminderMin * 60 * 1000));
+    
+    // Schedule the reminder
+    await scheduleReminder(
+      bookingId,
+      "1", // User ID
+      reminderTime,
+      `Reminder: ${bookingToRemind.title}`,
+      `Your meeting in ${bookingToRemind.roomName} starts in ${reminderMin} minutes.`,
+      ['in_app', 'email', 'push']
+    );
+    
+    // For demo purposes, if the reminder would be in the past, send it immediately
+    if (reminderTime < new Date()) {
+      await sendNotification(
+        'booking_reminder',
+        `Reminder: ${bookingToRemind.title}`, 
+        `Your meeting in ${bookingToRemind.roomName} is coming up.`,
+        ['in_app'],
+        '/my-bookings',
+        bookingId
+      );
+      
+      // Send email notification
+      const emailTemplate = generateReminderEmail(bookingToRemind, "You", reminderMin);
+      
+      await sendEmailNotification(
+        "you@example.com",
+        emailTemplate.subject,
+        emailTemplate.body
+      );
+    }
+    
     toast({
       title: "Reminder Set",
       description: `You will be reminded ${reminderMin} minutes before the booking`,

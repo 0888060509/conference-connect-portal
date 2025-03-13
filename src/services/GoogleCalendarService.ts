@@ -260,7 +260,7 @@ export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking
     equipment,
     cateringRequested,
     isRecurring,
-    recurrencePattern: recurrencePattern as string | RecurrenceRule | undefined
+    recurrencePattern
   };
 };
 

@@ -226,6 +226,7 @@ export function RoomFilters({
     onSortChange(newSort);
   };
 
+  // Fix: The issue is likely with the filter content in the popover
   return (
     <div className="space-y-4">
       {/* Main search and quick filters bar */}
@@ -461,11 +462,12 @@ export function RoomFilters({
                   <div className="space-y-2">
                     <Label className="text-base">Amenities</Label>
                     
+                    {/* Fix: Ensure amenities exist before trying to map through them */}
                     {Object.entries(amenityCategories).map(([category, amenities]) => (
                       <div key={category} className="mt-3">
                         <h4 className="text-sm font-medium text-muted-foreground mb-2">{category}</h4>
                         <div className="grid grid-cols-2 gap-2">
-                          {amenities.map(amenity => (
+                          {amenities.filter(amenity => allAmenities.includes(amenity)).map(amenity => (
                             <div key={amenity} className="flex items-center space-x-2">
                               <Checkbox 
                                 id={`amenity-${amenity}`}
@@ -647,10 +649,11 @@ export function RoomFilters({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                onClick={() => setCurrentSort({ 
-                  ...currentSort, 
-                  direction: currentSort.direction === 'asc' ? 'desc' : 'asc' 
-                })}
+                onClick={() => {
+                  const direction: 'asc' | 'desc' = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                  setCurrentSort({ ...currentSort, direction });
+                  onSortChange({ ...currentSort, direction });
+                }}
               >
                 <div className="flex items-center">
                   {currentSort.direction === 'asc' ? (

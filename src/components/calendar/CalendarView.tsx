@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { format, addMonths, subMonths, addDays, subDays, addWeeks, subWeeks, isSameDay } from "date-fns";
 import { 
@@ -30,8 +29,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DateSelector } from "@/components/calendar/DateSelector";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BookingModal } from "@/components/calendar/BookingModal";
+import { SwipeableCalendarView } from "@/components/calendar/SwipeableCalendarView";
 
-// Sample room data
 const rooms = [
   {
     id: 1,
@@ -39,7 +38,7 @@ const rooms = [
     location: "3rd Floor, Building A",
     capacity: 14,
     equipment: ["Video Conferencing", "Whiteboard", "Projector"],
-    availability: "available" as const, // Using 'as const' to ensure type is "available"
+    availability: "available" as const,
   },
   {
     id: 2,
@@ -47,7 +46,7 @@ const rooms = [
     location: "2nd Floor, Building B",
     capacity: 8,
     equipment: ["Whiteboards", "LCD Screens", "Video Conferencing"],
-    availability: "partial" as const, // Using 'as const' to ensure type is "partial"
+    availability: "partial" as const,
   },
   {
     id: 3,
@@ -55,7 +54,7 @@ const rooms = [
     location: "1st Floor, Building A",
     capacity: 20,
     equipment: ["Projector", "Video Conferencing"],
-    availability: "booked" as const, // Using 'as const' to ensure type is "booked"
+    availability: "booked" as const,
   },
   {
     id: 4,
@@ -63,7 +62,7 @@ const rooms = [
     location: "4th Floor, Building C",
     capacity: 6,
     equipment: ["TV", "Whiteboard"],
-    availability: "available" as const, // Using 'as const' to ensure type is "available"
+    availability: "available" as const,
   },
   {
     id: 5,
@@ -71,7 +70,7 @@ const rooms = [
     location: "4th Floor, Building C",
     capacity: 6,
     equipment: ["TV", "Whiteboard"],
-    availability: "partial" as const, // Using 'as const' to ensure type is "partial"
+    availability: "partial" as const,
   },
 ];
 
@@ -90,20 +89,17 @@ export function CalendarView() {
     endTime?: string;
   } | null>(null);
 
-  // Filter rooms based on search query
   const filteredRooms = rooms.filter(room => 
     room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     room.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
-  // Rooms to display based on selection
+
   const displayRooms = selectedRooms.length > 0 
     ? rooms.filter(room => selectedRooms.includes(room.id))
     : rooms;
 
-  // Handling navigation
   const today = () => setCurrentDate(new Date());
-  
+
   const navigate = (direction: "prev" | "next") => {
     if (selectedView === "month") {
       direction === "prev" ? setCurrentDate(subMonths(currentDate, 1)) : setCurrentDate(addMonths(currentDate, 1));
@@ -114,14 +110,12 @@ export function CalendarView() {
     }
   };
 
-  // Handle room selection for booking
   const handleRoomSelect = (room: any, date: Date, startTime?: string, endTime?: string) => {
     setSelectedRoom(room);
     setSelectedSlot({ date, startTime, endTime });
     setBookingModalOpen(true);
   };
 
-  // Get view title based on current view and date
   const getViewTitle = () => {
     if (selectedView === "month") {
       return format(currentDate, "MMMM yyyy");
@@ -134,7 +128,6 @@ export function CalendarView() {
     }
   };
 
-  // Toggle room selection
   const toggleRoomSelection = (roomId: number) => {
     if (selectedRooms.includes(roomId)) {
       setSelectedRooms(selectedRooms.filter(id => id !== roomId));
@@ -144,41 +137,45 @@ export function CalendarView() {
   };
 
   return (
-    <div className="flex h-full">
-      {/* Room Sidebar */}
-      <RoomSidebar 
-        rooms={filteredRooms}
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-        selectedRooms={selectedRooms}
-        onRoomToggle={toggleRoomSelection}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
+    <div className="flex flex-col md:flex-row h-full">
+      <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:relative fixed inset-0 z-30 bg-background transition-all`}>
+        <RoomSidebar 
+          rooms={filteredRooms}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          selectedRooms={selectedRooms}
+          onRoomToggle={toggleRoomSelection}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+      </div>
 
-      {/* Main Calendar Area */}
-      <div className="flex-1 ml-0 transition-all duration-300 space-y-4">
+      <div className="flex-1 transition-all duration-300 space-y-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={today}>
+            <Button variant="outline" size="sm" onClick={today} className="hidden md:flex">
               Today
             </Button>
-            <Button variant="outline" size="icon" onClick={() => navigate("prev")}>
-              <ChevronLeft className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={today} className="md:hidden px-2">
+              Today
             </Button>
-            <Button variant="outline" size="icon" onClick={() => navigate("next")}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <div 
-              className="font-medium text-lg cursor-pointer"
-              onClick={() => setDatePickerOpen(true)}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="md:hidden"
             >
-              {getViewTitle()}
-            </div>
+              <Filter className="h-4 w-4" />
+              Rooms
+            </Button>
           </div>
 
           <div className="flex items-center gap-2">
-            <Tabs value={selectedView} onValueChange={(value) => setSelectedView(value as any)}>
+            <Tabs 
+              value={selectedView} 
+              onValueChange={(value) => setSelectedView(value as any)}
+              className="hidden md:block"
+            >
               <TabsList>
                 <TabsTrigger value="month">
                   <CalendarDays className="h-4 w-4 mr-1" />
@@ -198,43 +195,71 @@ export function CalendarView() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            
+            <Tabs 
+              value={selectedView} 
+              onValueChange={(value) => setSelectedView(value as any)}
+              className="md:hidden"
+            >
+              <TabsList className="grid grid-cols-4 w-full">
+                <TabsTrigger value="month" className="px-2">
+                  <CalendarDays className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger value="week" className="px-2">
+                  <CalendarDays className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger value="day" className="px-2">
+                  <CalendarDays className="h-4 w-4" />
+                </TabsTrigger>
+                <TabsTrigger value="timeline" className="px-2">
+                  <List className="h-4 w-4" />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
         <div className="bg-card rounded-md border shadow">
-          {selectedView === "month" && (
-            <MonthView 
-              currentDate={currentDate} 
-              rooms={displayRooms} 
-              onSelectRoom={handleRoomSelect}
-            />
-          )}
-          {selectedView === "week" && (
-            <WeekView 
-              currentDate={currentDate} 
-              rooms={displayRooms} 
-              onSelectRoom={handleRoomSelect}
-            />
-          )}
-          {selectedView === "day" && (
-            <DayView 
-              currentDate={currentDate} 
-              rooms={displayRooms} 
-              onSelectRoom={handleRoomSelect}
-            />
-          )}
-          {selectedView === "timeline" && (
-            <TimelineView 
-              currentDate={currentDate} 
-              rooms={displayRooms} 
-              onSelectRoom={handleRoomSelect}
-            />
-          )}
+          <SwipeableCalendarView 
+            currentDate={currentDate}
+            setCurrentDate={setCurrentDate}
+            view={selectedView}
+            title={getViewTitle()}
+          >
+            {selectedView === "month" && (
+              <MonthView 
+                currentDate={currentDate} 
+                rooms={displayRooms} 
+                onSelectRoom={handleRoomSelect}
+              />
+            )}
+            {selectedView === "week" && (
+              <WeekView 
+                currentDate={currentDate} 
+                rooms={displayRooms} 
+                onSelectRoom={handleRoomSelect}
+              />
+            )}
+            {selectedView === "day" && (
+              <DayView 
+                currentDate={currentDate} 
+                rooms={displayRooms} 
+                onSelectRoom={handleRoomSelect}
+              />
+            )}
+            {selectedView === "timeline" && (
+              <TimelineView 
+                currentDate={currentDate} 
+                rooms={displayRooms} 
+                onSelectRoom={handleRoomSelect}
+              />
+            )}
+          </SwipeableCalendarView>
         </div>
 
-        <div className="flex items-center gap-4 mt-2">
+        <div className="flex flex-wrap items-center gap-4 mt-2">
           <div className="text-sm font-medium">Room Status:</div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <RoomStatusIndicator status="available" label="Available" />
             <RoomStatusIndicator status="partial" label="Partially Booked" />
             <RoomStatusIndicator status="booked" label="Fully Booked" />
@@ -242,7 +267,6 @@ export function CalendarView() {
         </div>
       </div>
 
-      {/* Date Picker Dialog */}
       <Dialog open={datePickerOpen} onOpenChange={setDatePickerOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -258,7 +282,6 @@ export function CalendarView() {
         </DialogContent>
       </Dialog>
 
-      {/* Booking Modal */}
       {selectedRoom && selectedSlot && (
         <BookingModal
           isOpen={bookingModalOpen}

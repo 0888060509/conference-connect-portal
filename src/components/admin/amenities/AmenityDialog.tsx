@@ -20,8 +20,8 @@ import {
   SelectValue 
 } from "@/components/ui/select";
 import { AmenityIcon } from "./AmenityIcon";
-import { Amenity, AmenityType } from "@/types/amenities";
-import { createAmenity, updateAmenity } from "@/services/AmenityService";
+import { Amenity, AmenityType } from "@/services/amenities";
+import { createAmenity, updateAmenity } from "@/services/amenities";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 

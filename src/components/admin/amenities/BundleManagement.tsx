@@ -17,7 +17,7 @@ import {
   getAmenityBundles, 
   getAmenities, 
   deleteAmenityBundle 
-} from "@/services/AmenityService";
+} from "@/services/amenities";
 import { BundleDialog } from "./BundleDialog";
 import { toast } from "@/hooks/use-toast";
 import { 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -13,8 +12,8 @@ import {
 } from "@/components/ui/table";
 import { AmenityIcon } from "./AmenityIcon";
 import { AmenityTypeDialog } from "./AmenityTypeDialog";
-import { AmenityType } from "@/types/amenities";
-import { getAmenityTypes, deleteAmenityType } from "@/services/AmenityService";
+import { AmenityType } from "@/services/amenities";
+import { getAmenityTypes, deleteAmenityType } from "@/services/amenities";
 import { toast } from "@/hooks/use-toast";
 import { 
   Search, 

@@ -16,9 +16,10 @@ import { toast } from "@/hooks/use-toast";
 import { MultiSelect } from "./MultiSelect";
 import { 
   createAmenityBundle, 
-  updateAmenityBundle 
-} from "@/services/AmenityService";
-import { AmenityType, AmenityBundle, Amenity } from "@/types/amenities";
+  updateAmenityBundle,
+  AmenityBundle,
+  Amenity
+} from "@/services/amenities";
 import { Package, Loader2 } from "lucide-react";
 
 interface BundleDialogProps {

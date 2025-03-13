@@ -19,8 +19,8 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Amenity } from "@/types/amenities";
-import { createAmenityIssue, updateAmenityStatus } from "@/services/AmenityService";
+import { Amenity } from "@/services/amenities";
+import { createAmenityIssue, updateAmenityStatus } from "@/services/amenities";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { AlertCircle } from "lucide-react";

@@ -1,14 +1,12 @@
 
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Search, Building, Users, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
+import { RoomResults } from "@/components/rooms/RoomResults";
+import { type Room } from "@/components/rooms/RoomCard";
 
 // Sample rooms data
-const rooms = [
+const rooms: Room[] = [
   {
     id: 1,
     name: "Executive Boardroom",
@@ -63,84 +61,47 @@ const rooms = [
     equipment: ["Projector", "Computers", "Whiteboard"],
     image: "https://placehold.co/400x300/E74C3C/FFFFFF?text=Training+Room"
   },
+  {
+    id: 7,
+    name: "Brainstorming Room",
+    location: "1st Floor, Building B",
+    capacity: 12,
+    status: "available",
+    equipment: ["Whiteboard", "Wi-Fi", "Coffee Machine"],
+    image: "https://placehold.co/400x300/27AE60/FFFFFF?text=Brainstorming+Room"
+  },
+  {
+    id: 8,
+    name: "Focus Room",
+    location: "4th Floor, Building A",
+    capacity: 2,
+    status: "available",
+    equipment: ["TV Screen", "Wi-Fi"],
+    image: "https://placehold.co/400x300/8E44AD/FFFFFF?text=Focus+Room"
+  },
+  {
+    id: 9,
+    name: "Auditorium",
+    location: "Ground Floor, Building C",
+    capacity: 50,
+    status: "available",
+    equipment: ["Sound System", "Projector", "Video Conference", "Wi-Fi"],
+    image: "https://placehold.co/400x300/F39C12/FFFFFF?text=Auditorium"
+  },
 ];
 
 export default function Rooms() {
   return (
     <Layout title="Rooms">
       <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search rooms..." className="pl-8" />
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" className="w-full md:w-auto">
-              Filter
-            </Button>
-            <Button className="bg-secondary hover:bg-secondary-light w-full md:w-auto">
-              <Plus className="h-4 w-4 mr-2" /> Add Room
-            </Button>
-          </div>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold tracking-tight">Meeting Rooms</h1>
+          <Button className="bg-secondary hover:bg-secondary-light">
+            <Plus className="h-4 w-4 mr-2" /> Add Room
+          </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {rooms.map((room) => (
-            <Card key={room.id} className="overflow-hidden hover:shadow-md transition-shadow">
-              <div 
-                className="h-40 bg-cover bg-center" 
-                style={{ backgroundImage: `url(${room.image})` }}
-              />
-              <CardContent className="p-5">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg">{room.name}</h3>
-                    <div className="flex items-center text-sm text-muted-foreground mt-1">
-                      <Building className="h-3.5 w-3.5 mr-1" />
-                      {room.location}
-                    </div>
-                  </div>
-                  <div>
-                    <Badge variant="outline" className={cn(
-                      room.status === "available" && "bg-success/10 text-success border-success/20",
-                      room.status === "booked" && "bg-accent/10 text-accent border-accent/20",
-                      room.status === "maintenance" && "bg-warning/10 text-warning border-warning/20"
-                    )}>
-                      {room.status === "available" ? "Available" : room.status === "booked" ? "Booked" : "Maintenance"}
-                    </Badge>
-                  </div>
-                </div>
-                
-                <div className="flex items-center mt-3 text-sm">
-                  <Users className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                  <span>Capacity: {room.capacity}</span>
-                </div>
-                
-                <div className="flex flex-wrap gap-1 mt-3">
-                  {room.equipment.map((item, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs font-normal">
-                      {item}
-                    </Badge>
-                  ))}
-                </div>
-                
-                <div className="flex justify-between mt-4">
-                  <Button variant="outline" size="sm">View Details</Button>
-                  <Button 
-                    size="sm" 
-                    className={cn(
-                      "bg-secondary hover:bg-secondary-light",
-                      room.status !== "available" && "opacity-50 cursor-not-allowed"
-                    )}
-                    disabled={room.status !== "available"}
-                  >
-                    Book
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <RoomResults rooms={rooms} />
       </div>
     </Layout>
   );

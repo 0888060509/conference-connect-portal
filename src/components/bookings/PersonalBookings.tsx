@@ -66,8 +66,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 2,
     roomName: "Meeting Room 101",
     location: "Floor 2",
-    start: new Date(new Date().setDate(new Date().getDate() + 1).setHours(14, 0, 0, 0)),
-    end: new Date(new Date().setDate(new Date().getDate() + 1).setHours(15, 30, 0, 0)),
+    start: new Date(new Date().setDate(new Date().getDate() + 1)).setHours(14, 0, 0, 0),
+    end: new Date(new Date().setDate(new Date().getDate() + 1)).setHours(15, 30, 0, 0),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "4", name: "Michael Johnson", email: "michael@example.com" },
@@ -87,8 +87,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 3,
     roomName: "Executive Boardroom",
     location: "Floor 5",
-    start: new Date(new Date().setDate(new Date().getDate() - 2).setHours(9, 0, 0, 0)),
-    end: new Date(new Date().setDate(new Date().getDate() - 2).setHours(10, 0, 0, 0)),
+    start: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(9, 0, 0, 0),
+    end: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 0, 0, 0),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "6", name: "David Brown", email: "david@example.com" },
@@ -100,9 +100,9 @@ const MOCK_BOOKINGS: Booking[] = [
     createdBy: "You",
     createdAt: new Date(new Date().setDate(new Date().getDate() - 9)),
     checkedIn: true,
-    checkedInAt: new Date(new Date().setDate(new Date().getDate() - 2).setHours(8, 55, 0, 0)),
+    checkedInAt: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(8, 55, 0, 0),
     checkedOut: true,
-    checkedOutAt: new Date(new Date().setDate(new Date().getDate() - 2).setHours(10, 5, 0, 0)),
+    checkedOutAt: new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 5, 0, 0),
   },
   {
     id: "bk-004",
@@ -111,8 +111,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 4,
     roomName: "Meeting Room 102",
     location: "Floor 2",
-    start: new Date(new Date().setDate(new Date().getDate() - 1).setHours(13, 0, 0, 0)),
-    end: new Date(new Date().setDate(new Date().getDate() - 1).setHours(14, 0, 0, 0)),
+    start: new Date(new Date().setDate(new Date().getDate() - 1)).setHours(13, 0, 0, 0),
+    end: new Date(new Date().setDate(new Date().getDate() - 1)).setHours(14, 0, 0, 0),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "7", name: "Emma Wilson", email: "emma@example.com" },
@@ -146,7 +146,7 @@ export function PersonalBookings() {
     });
   };
 
-  const handleCancelBooking = (bookingId: string, reason: string) => {
+  const handleCancelBooking = (bookingId: string, reason?: string) => {
     // Update booking status to cancelled
     const updatedBookings = bookings.map(booking => 
       booking.id === bookingId 
@@ -159,7 +159,7 @@ export function PersonalBookings() {
     
     toast({
       title: "Booking Cancelled",
-      description: `Booking has been cancelled. Reason: ${reason}`,
+      description: reason ? `Booking has been cancelled. Reason: ${reason}` : "Booking has been cancelled.",
     });
   };
 
@@ -214,14 +214,25 @@ export function PersonalBookings() {
     if (!bookingToDuplicate) return;
     
     // Create a new booking based on the existing one
+    const nextWeekDate = new Date();
+    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+    
+    const startHours = bookingToDuplicate.start.getHours();
+    const startMinutes = bookingToDuplicate.start.getMinutes();
+    const endHours = bookingToDuplicate.end.getHours();
+    const endMinutes = bookingToDuplicate.end.getMinutes();
+    
+    const newStartDate = new Date(nextWeekDate);
+    newStartDate.setHours(startHours, startMinutes, 0, 0);
+    
+    const newEndDate = new Date(nextWeekDate);
+    newEndDate.setHours(endHours, endMinutes, 0, 0);
+    
     const newBooking: Booking = {
       ...bookingToDuplicate,
       id: `bk-${Date.now()}`, // Generate a new ID
-      start: new Date(new Date().setDate(new Date().getDate() + 7)), // Set to next week
-      end: new Date(new Date().setDate(new Date().getDate() + 7).setHours(
-        new Date(bookingToDuplicate.end).getHours(),
-        new Date(bookingToDuplicate.end).getMinutes()
-      )),
+      start: newStartDate,
+      end: newEndDate,
       status: 'upcoming',
       createdAt: new Date(),
       checkedIn: undefined,
@@ -248,10 +259,11 @@ export function PersonalBookings() {
     });
   };
 
-  const handleSetReminder = (bookingId: string, minutes: number) => {
+  const handleSetReminder = (bookingId: string, minutes?: number) => {
+    const reminderMin = minutes || 15; // Default to 15 minutes if not specified
     toast({
       title: "Reminder Set",
-      description: `You will be reminded ${minutes} minutes before the booking`,
+      description: `You will be reminded ${reminderMin} minutes before the booking`,
     });
   };
 

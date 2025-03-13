@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BookingStatus } from "./PersonalBookings";
+import { DateRange } from "react-day-picker";
 
 interface BookingFiltersProps {
   filters: {
@@ -37,17 +38,22 @@ const ROOMS = [
 ];
 
 export function BookingFilters({ filters, onFilterChange }: BookingFiltersProps) {
-  const [date, setDate] = useState<{ from: Date | undefined; to: Date | undefined }>({
+  const [date, setDate] = useState<DateRange | undefined>({
     from: filters.dateRange.from,
     to: filters.dateRange.to,
   });
 
   // Update parent component when date changes
   useEffect(() => {
-    onFilterChange({
-      ...filters,
-      dateRange: date,
-    });
+    if (date) {
+      onFilterChange({
+        ...filters,
+        dateRange: {
+          from: date.from,
+          to: date.to
+        },
+      });
+    }
   }, [date]);
 
   const handleRoomChange = (value: string) => {
@@ -101,11 +107,11 @@ export function BookingFilters({ filters, onFilterChange }: BookingFiltersProps)
                 variant="outline"
                 className={cn(
                   "w-full justify-start text-left font-normal",
-                  !date.from && !date.to && "text-muted-foreground"
+                  !date?.from && !date?.to && "text-muted-foreground"
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {date.from ? (
+                {date?.from ? (
                   date.to ? (
                     <>
                       {format(date.from, "LLL dd, y")} -{" "}
@@ -123,7 +129,7 @@ export function BookingFilters({ filters, onFilterChange }: BookingFiltersProps)
               <Calendar
                 initialFocus
                 mode="range"
-                defaultMonth={date.from}
+                defaultMonth={date?.from}
                 selected={date}
                 onSelect={setDate}
                 numberOfMonths={2}

@@ -48,12 +48,12 @@ import { BookingDetails } from "./BookingDetails";
 
 interface BookingsListProps {
   bookings: Booking[];
-  onCancel: (bookingId: string, reason: string) => void;
+  onCancel: (bookingId: string, reason?: string) => void;
   onCheckIn: (bookingId: string) => void;
   onCheckOut: (bookingId: string) => void;
   onDuplicate: (bookingId: string) => void;
   onShare: (bookingId: string, method: 'email' | 'calendar') => void;
-  onSetReminder: (bookingId: string, minutes: number) => void;
+  onSetReminder: (bookingId: string, minutes?: number) => void;
 }
 
 export function BookingsList({

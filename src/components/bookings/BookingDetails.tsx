@@ -33,12 +33,12 @@ interface BookingDetailsProps {
   bookingId: string;
   bookings: Booking[];
   onClose: () => void;
-  onCancel: (bookingId: string) => void;
+  onCancel: (bookingId: string, reason?: string) => void;
   onCheckIn: (bookingId: string) => void;
   onCheckOut: (bookingId: string) => void;
   onDuplicate: (bookingId: string) => void;
   onShare: (bookingId: string, method: 'email' | 'calendar') => void;
-  onSetReminder: (bookingId: string) => void;
+  onSetReminder: (bookingId: string, minutes?: number) => void;
 }
 
 export function BookingDetails({

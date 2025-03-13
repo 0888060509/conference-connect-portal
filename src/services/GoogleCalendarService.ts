@@ -164,8 +164,8 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
   };
   
   // Add recurrence if booking is recurring
-  if (booking.isRecurring) {
-    if (booking.recurrencePattern && typeof booking.recurrencePattern === 'object') {
+  if (booking.isRecurring && booking.recurrencePattern) {
+    if (typeof booking.recurrencePattern === 'object') {
       // If it's an advanced recurrence pattern object
       const startDate = new Date(booking.start);
       const rrule = generateRRuleString(booking.recurrencePattern as RecurrenceRule, startDate);
@@ -183,7 +183,7 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
           booking.recurrencePattern.exceptionDates
         );
       }
-    } else if (booking.recurrencePattern && typeof booking.recurrencePattern === 'string') {
+    } else if (typeof booking.recurrencePattern === 'string') {
       // Simple recurrence pattern as string
       event.recurrence = [`RRULE:FREQ=${booking.recurrencePattern.toUpperCase()}`];
     }
@@ -222,24 +222,28 @@ export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking
   const isRecurring = !!event.recurrence && event.recurrence.length > 0;
   let recurrencePattern: string | RecurrenceRule | undefined = undefined;
   
-  if (isRecurring && event.recurrence[0].startsWith('RRULE:')) {
-    // Parse advanced recurrence rule
-    recurrencePattern = parseRRuleString(event.recurrence[0]);
-    
-    // Parse exception dates if they exist
-    if (event.extendedProperties?.private?.exceptionDates) {
-      try {
-        const exceptionDates = JSON.parse(event.extendedProperties.private.exceptionDates);
-        recurrencePattern.exceptionDates = exceptionDates.map((date: string) => new Date(date));
-      } catch (e) {
-        console.error("Error parsing exception dates", e);
-        recurrencePattern.exceptionDates = [];
+  if (isRecurring) {
+    if (event.recurrence[0].startsWith('RRULE:')) {
+      // Parse advanced recurrence rule
+      const pattern = parseRRuleString(event.recurrence[0]);
+      
+      // Parse exception dates if they exist
+      if (event.extendedProperties?.private?.exceptionDates) {
+        try {
+          const exceptionDates = JSON.parse(event.extendedProperties.private.exceptionDates);
+          pattern.exceptionDates = exceptionDates.map((date: string) => new Date(date));
+        } catch (e) {
+          console.error("Error parsing exception dates", e);
+          pattern.exceptionDates = [];
+        }
       }
+      
+      recurrencePattern = pattern;
+    } else if (event.recurrence[0].startsWith('RRULE:FREQ=')) {
+      // Parse simple recurrence pattern
+      const frequencyPattern = event.recurrence[0].split('=')[1].toLowerCase();
+      recurrencePattern = frequencyPattern;
     }
-  } else if (isRecurring && event.recurrence[0].startsWith('RRULE:FREQ=')) {
-    // Parse simple recurrence pattern
-    const frequencyPattern = event.recurrence[0].split('=')[1].toLowerCase();
-    recurrencePattern = frequencyPattern;
   }
   
   return {

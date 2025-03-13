@@ -28,15 +28,12 @@ export interface Booking {
   checkedInAt?: string;
   checkedOut?: boolean;
   checkedOutAt?: string;
-  equipment?: string[];
-  cateringRequested?: boolean;
-  isRecurring?: boolean;
-  recurrencePattern?: string;
   createdBy?: string;
 }
 
 export type BookingStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
 
+// Sample bookings data
 const SAMPLE_BOOKINGS: Booking[] = [
   {
     id: "1",
@@ -48,9 +45,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 1).setHours(11, 0, 0, 0)).toISOString(),
     attendees: ["john.doe@example.com", "jane.smith@example.com"],
     status: "upcoming",
-    equipment: ["projector", "whiteboard"],
-    cateringRequested: false,
-    isRecurring: false
+    createdBy: "john.doe@example.com"
   },
   {
     id: "2",
@@ -64,10 +59,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     status: "ongoing",
     checkedIn: true,
     checkedInAt: new Date(new Date().setHours(9, 0, 0, 0)).toISOString(),
-    equipment: ["projector", "microphone"],
-    cateringRequested: true,
-    isRecurring: true,
-    recurrencePattern: "weekly"
+    createdBy: "mark.johnson@example.com"
   },
   {
     id: "3",
@@ -79,6 +71,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 2).setHours(12, 0, 0, 0)).toISOString(),
     attendees: ["sarah.jones@example.com", "david.williams@example.com"],
     status: "completed",
+    createdBy: "sarah.jones@example.com"
   },
   {
     id: "4",
@@ -90,6 +83,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 3).setHours(16, 0, 0, 0)).toISOString(),
     attendees: ["emily.clark@example.com", "kevin.davis@example.com"],
     status: "upcoming",
+    createdBy: "emily.clark@example.com"
   },
   {
     id: "5",
@@ -101,6 +95,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 7).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["all.employees@example.com"],
     status: "upcoming",
+    createdBy: "hr@example.com"
   },
   {
     id: "6",
@@ -112,6 +107,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 7).setHours(12, 0, 0, 0)).toISOString(),
     attendees: ["board.members@example.com"],
     status: "completed",
+    createdBy: "ceo@example.com"
   },
   {
     id: "7",
@@ -123,6 +119,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 2).setHours(15, 0, 0, 0)).toISOString(),
     attendees: ["product.team@example.com"],
     status: "upcoming",
+    createdBy: "product.manager@example.com"
   },
   {
     id: "8",
@@ -134,6 +131,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["hr.team@example.com"],
     status: "completed",
+    createdBy: "hr.director@example.com"
   },
   {
     id: "9",
@@ -145,6 +143,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(addDays(new Date(), 4).setHours(14, 0, 0, 0)).toISOString(),
     attendees: ["customer1@example.com", "customer2@example.com"],
     status: "upcoming",
+    createdBy: "customer.success@example.com"
   },
   {
     id: "10",
@@ -156,6 +155,7 @@ const SAMPLE_BOOKINGS: Booking[] = [
     end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["hr.team@example.com"],
     status: "cancelled",
+    createdBy: "office.manager@example.com"
   },
 ];
 
@@ -189,27 +189,39 @@ export function PersonalBookings() {
   };
 
   const handleCancelBooking = (bookingId: string, reason?: string) => {
+    // Implement your cancellation logic here
     console.log(`Booking ${bookingId} cancelled with reason: ${reason}`);
+    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleCheckIn = (bookingId: string) => {
+    // Implement your check-in logic here
     console.log(`Checking in for booking ${bookingId}`);
+    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleCheckOut = (bookingId: string) => {
+    // Implement your check-out logic here
     console.log(`Checking out for booking ${bookingId}`);
+    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleDuplicateBooking = (bookingId: string) => {
+    // Implement your duplicate logic here
     console.log(`Duplicating booking ${bookingId}`);
+    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleShareBooking = (bookingId: string, method: 'email' | 'calendar') => {
+    // Implement your share logic here
     console.log(`Sharing booking ${bookingId} via ${method}`);
+    // Open email client or add to calendar
   };
 
   const handleSetReminder = (bookingId: string, minutes?: number) => {
+    // Implement your set reminder logic here
     console.log(`Setting reminder for booking ${bookingId} ${minutes ? `before ${minutes} minutes` : ''}`);
+    // Set a local notification or use a service to send a reminder
   };
 
   return (
@@ -266,6 +278,7 @@ export function PersonalBookings() {
         </TabsContent>
       </Tabs>
 
+      {/* Booking Details */}
       {viewBookingId && (
         <BookingDetails
           bookingId={viewBookingId}

@@ -20,6 +20,7 @@ import Login from "./pages/Login";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 import RoomAdmin from "./pages/RoomAdmin";
+import SystemSettings from "./pages/SystemSettings";
 import Notifications from "./pages/Notifications";
 import NotificationPreferences from "./pages/NotificationPreferences";
 
@@ -61,6 +62,7 @@ const App = () => (
                   <Route element={<PrivateRoute requireAdmin={true} />}>
                     <Route path="/admin" element={<AdminPanel />} />
                     <Route path="/admin/rooms" element={<RoomAdmin />} />
+                    <Route path="/admin/settings" element={<SystemSettings />} />
                   </Route>
                 </>
               )}

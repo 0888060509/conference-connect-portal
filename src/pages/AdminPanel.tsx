@@ -51,20 +51,22 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
           
-          <Card className="h-full">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Settings className="h-5 w-5 text-muted-foreground" />
-                <CardTitle className="text-lg">System Settings</CardTitle>
-              </div>
-              <CardDescription>
-                Configure application settings and integrations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" className="w-full">Open Settings</Button>
-            </CardContent>
-          </Card>
+          <Link to="/admin/settings">
+            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle className="text-lg">System Settings</CardTitle>
+                </div>
+                <CardDescription>
+                  Configure application settings and integrations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button variant="default" className="w-full">Open Settings</Button>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <Tabs defaultValue="users">

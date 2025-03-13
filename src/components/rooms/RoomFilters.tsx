@@ -216,12 +216,12 @@ export function RoomFilters({
 
   // Update sort
   const handleSortChange = (field: SortOption['field']) => {
-    const direction = 
+    const direction: 'asc' | 'desc' = 
       currentSort.field === field && currentSort.direction === 'asc' 
         ? 'desc' 
         : 'asc';
     
-    const newSort = { field, direction };
+    const newSort: SortOption = { field, direction };
     setCurrentSort(newSort);
     onSortChange(newSort);
   };

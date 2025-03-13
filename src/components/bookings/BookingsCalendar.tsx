@@ -4,6 +4,7 @@ import { Calendar, Views, dateFnsLocalizer } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { Booking } from "./PersonalBookings";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
 // Setup localizer for react-big-calendar
 const locales = {
@@ -138,8 +139,8 @@ export function BookingsCalendar({
     );
   };
 
-  // Handle event prop propagation for each callback function
-  const handleCancel = (bookingId: string, reason: string) => {
+  // Handle event prop propagation for each callback function with correct signatures
+  const handleCancel = (bookingId: string, reason?: string) => {
     onCancel(bookingId, reason);
   };
 
@@ -159,7 +160,7 @@ export function BookingsCalendar({
     onShare(bookingId, method);
   };
 
-  const handleSetReminder = (bookingId: string, minutes: number) => {
+  const handleSetReminder = (bookingId: string, minutes?: number) => {
     onSetReminder(bookingId, minutes);
   };
 

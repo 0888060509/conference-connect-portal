@@ -1,4 +1,3 @@
-
 import { Booking } from "@/components/bookings/PersonalBookings";
 
 // This is a mock service - in a real application, this would connect to the Google Calendar API
@@ -225,7 +224,7 @@ export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking
     
   // Check if event has recurrence
   const isRecurring = !!event.recurrence && event.recurrence.length > 0;
-  let recurrencePattern: string | any = undefined;
+  let recurrencePattern: string | RecurrenceRule | undefined = undefined;
   
   if (isRecurring && event.recurrence[0].startsWith('RRULE:')) {
     // Parse advanced recurrence rule
@@ -235,10 +234,16 @@ export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking
     if (event.extendedProperties?.private?.exceptionDates) {
       try {
         const exceptionDates = JSON.parse(event.extendedProperties.private.exceptionDates);
-        recurrencePattern.exceptionDates = exceptionDates.map((date: string) => new Date(date));
+        // Ensure recurrencePattern is an object before accessing exceptionDates
+        if (typeof recurrencePattern === 'object' && recurrencePattern !== null) {
+          recurrencePattern.exceptionDates = exceptionDates.map((date: string) => new Date(date));
+        }
       } catch (e) {
         console.error("Error parsing exception dates", e);
-        recurrencePattern.exceptionDates = [];
+        // Ensure recurrencePattern is an object before setting exceptionDates
+        if (typeof recurrencePattern === 'object' && recurrencePattern !== null) {
+          recurrencePattern.exceptionDates = [];
+        }
       }
     }
   } else if (isRecurring && event.recurrence[0].startsWith('RRULE:FREQ=')) {

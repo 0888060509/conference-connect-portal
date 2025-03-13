@@ -1,4 +1,3 @@
-
 import { 
   Amenity, 
   AmenityType, 
@@ -6,7 +5,8 @@ import {
   AmenityRequest, 
   AmenityIssue,
   MaintenanceRecord,
-  AmenityStatus
+  AmenityStatus,
+  AmenityUsage
 } from "@/types/amenities";
 
 // Mock data for amenity types
@@ -499,3 +499,4 @@ export const getUpcomingMaintenance = async (): Promise<Array<Amenity & { mainte
   
   return amenitiesWithMaintenance;
 };
+

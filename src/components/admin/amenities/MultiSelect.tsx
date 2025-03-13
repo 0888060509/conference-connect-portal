@@ -17,33 +17,62 @@ interface MultiSelectProps {
   selected: string[];
   onChange: (selected: string[]) => void;
   placeholder?: string;
+  emptyMessage?: string;
 }
 
-export function MultiSelect({ 
-  options, 
-  selected, 
-  onChange, 
-  placeholder = "Select options" 
+export function MultiSelect({
+  options,
+  selected,
+  onChange,
+  placeholder = "Select options",
+  emptyMessage = "No options found."
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLabels, setSelectedLabels] = useState<Record<string, string>>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const [inputWidth, setInputWidth] = useState<number | undefined>(undefined);
+
+  // Initialize selected labels
+  useEffect(() => {
+    const labels: Record<string, string> = {};
+    options.forEach(option => {
+      if (selected.includes(option.value)) {
+        labels[option.value] = option.label;
+      }
+    });
+    setSelectedLabels(labels);
+  }, [options, selected]);
+
+  // Update trigger width when selected items change
+  useEffect(() => {
+    if (triggerRef.current) {
+      setInputWidth(triggerRef.current.getBoundingClientRect().width);
+    }
+  }, [selected]);
 
   const handleSelect = (value: string) => {
-    if (selected.includes(value)) {
-      onChange(selected.filter(item => item !== value));
+    const option = options.find(opt => opt.value === value);
+    if (!option) return;
+    
+    const newSelected = [...selected];
+    
+    if (newSelected.includes(value)) {
+      // Remove if already selected
+      const index = newSelected.indexOf(value);
+      newSelected.splice(index, 1);
     } else {
-      onChange([...selected, value]);
+      // Add if not selected
+      newSelected.push(value);
     }
+    
+    onChange(newSelected);
   };
 
-  const handleRemove = (value: string) => {
+  const handleRemove = (e: React.MouseEvent, value: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     onChange(selected.filter(item => item !== value));
   };
-
-  const filteredOptions = options.filter(option => 
-    option.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -53,69 +82,62 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn(
-            "w-full justify-between",
-            selected.length > 0 ? "h-auto min-h-10" : "h-10"
-          )}
+          className="w-full justify-between min-h-10"
         >
-          <div className="flex flex-wrap gap-1 max-w-[90%]">
+          <div className="flex flex-wrap gap-1 items-center">
             {selected.length === 0 ? (
               <span className="text-muted-foreground">{placeholder}</span>
             ) : (
-              selected.map(value => {
-                const option = options.find(opt => opt.value === value);
-                return (
-                  <Badge 
-                    key={value} 
-                    variant="secondary" 
-                    className="mr-1 mb-1"
+              selected.map(value => (
+                <Badge key={value} variant="secondary" className="mr-1 px-1 py-0">
+                  {selectedLabels[value] || value}
+                  <button
+                    className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-offset-2"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleRemove(e as unknown as React.MouseEvent, value);
+                      }
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => handleRemove(e, value)}
                   >
-                    {option?.label || value}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 ml-1 text-muted-foreground hover:text-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemove(value);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </Badge>
-                );
-              })
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))
             )}
           </div>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start" style={{ width: triggerRef.current?.offsetWidth }}>
-        <Command shouldFilter={false}>
-          <CommandInput 
-            placeholder="Search..." 
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-          />
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup className="max-h-60 overflow-y-auto">
-            {filteredOptions.map(option => (
-              <CommandItem
-                key={option.value}
-                value={option.value}
-                onSelect={() => handleSelect(option.value)}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    selected.includes(option.value) 
-                      ? "opacity-100" 
-                      : "opacity-0"
-                  )}
-                />
-                {option.label}
-              </CommandItem>
-            ))}
+      <PopoverContent className="w-full p-0" style={{ width: inputWidth }}>
+        <Command>
+          <CommandInput placeholder="Search..." />
+          <CommandEmpty>{emptyMessage}</CommandEmpty>
+          <CommandGroup className="max-h-64 overflow-auto">
+            {options.map((option) => {
+              const isSelected = selected.includes(option.value);
+              return (
+                <CommandItem
+                  key={option.value}
+                  onSelect={() => handleSelect(option.value)}
+                  className="flex items-center gap-2"
+                >
+                  <div
+                    className={cn(
+                      "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                      isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
+                    )}
+                  >
+                    {isSelected && <Check className="h-3 w-3" />}
+                  </div>
+                  <span>{option.label}</span>
+                </CommandItem>
+              );
+            })}
           </CommandGroup>
         </Command>
       </PopoverContent>

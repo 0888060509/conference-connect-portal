@@ -1,6 +1,4 @@
 
-import { LucideIcon } from "lucide-react";
-
 export type AmenityStatus = "available" | "unavailable" | "maintenance" | "scheduled";
 
 export interface MaintenanceRecord {

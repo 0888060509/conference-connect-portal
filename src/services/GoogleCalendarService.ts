@@ -1,406 +1,432 @@
-import { Booking } from "@/components/bookings/PersonalBookings";
+import { RRule, RRuleSet, rrulestr } from 'rrule'
+import { google } from 'googleapis';
+import { OAuth2Client } from 'googleapis-common';
 
-// This is a mock service - in a real application, this would connect to the Google Calendar API
-export interface GoogleCalendarEvent {
-  id: string;
-  summary: string;
-  description: string;
-  location: string;
-  start: {
-    dateTime: string;
-    timeZone: string;
-  };
-  end: {
-    dateTime: string;
-    timeZone: string;
-  };
-  attendees: {
-    email: string;
-    responseStatus?: 'needsAction' | 'declined' | 'tentative' | 'accepted';
-  }[];
-  recurrence?: string[];
-  extendedProperties?: {
-    private?: {
-      equipment?: string;
-      cateringRequested?: string;
-      exceptionDates?: string; // JSON stringified array of exception dates
-    };
-  };
-}
+// Scopes for Google Calendar API
+const SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.events'
+];
 
-// Enhanced recurrence interface for Google Calendar
-export interface RecurrenceRule {
-  type: "daily" | "weekly" | "monthly" | "custom";
-  interval: number;
-  weekdays?: string[];
-  monthlyOption?: "dayOfMonth" | "dayOfWeek";
-  endType: "afterDate" | "afterOccurrences" | "never";
-  endDate?: Date;
-  occurrences?: number;
-  exceptionDates: Date[];
-}
+// Function to generate the URL for Google OAuth2 authentication
+export function getGoogleAuthURL(clientId: string, redirectUri: string, state: string) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    '',
+    redirectUri
+  );
 
-// Helper to generate RRule string for Google Calendar
-const generateRRuleString = (rule: RecurrenceRule, startDate: Date): string => {
-  let rrule = `RRULE:FREQ=`;
-  
-  // Set frequency
-  switch (rule.type) {
-    case "daily":
-      rrule += "DAILY";
-      break;
-    case "weekly":
-      rrule += "WEEKLY";
-      break;
-    case "monthly":
-      rrule += "MONTHLY";
-      break;
-    case "custom":
-      // Custom would need more complex logic
-      rrule += "WEEKLY"; // Default to weekly for custom
-      break;
-  }
-  
-  // Set interval
-  if (rule.interval > 1) {
-    rrule += `;INTERVAL=${rule.interval}`;
-  }
-  
-  // Set weekdays for weekly recurrence
-  if (rule.type === "weekly" && rule.weekdays && rule.weekdays.length > 0) {
-    rrule += `;BYDAY=${rule.weekdays.join(',')}`;
-  }
-  
-  // Set monthly options
-  if (rule.type === "monthly" && rule.monthlyOption) {
-    if (rule.monthlyOption === "dayOfMonth") {
-      rrule += `;BYMONTHDAY=${startDate.getDate()}`;
-    } else if (rule.monthlyOption === "dayOfWeek") {
-      const weekNum = Math.ceil(startDate.getDate() / 7);
-      const dayOfWeek = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][startDate.getDay()];
-      rrule += `;BYDAY=${weekNum}${dayOfWeek}`;
-    }
-  }
-  
-  // Set end condition
-  if (rule.endType === "afterDate" && rule.endDate) {
-    rrule += `;UNTIL=${rule.endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
-  } else if (rule.endType === "afterOccurrences" && rule.occurrences) {
-    rrule += `;COUNT=${rule.occurrences}`;
-  }
-  
-  return rrule;
-};
-
-// Helper to parse RRule string from Google Calendar
-const parseRRuleString = (rruleString: string): RecurrenceRule => {
-  const rule: RecurrenceRule = {
-    type: "weekly",
-    interval: 1,
-    exceptionDates: [],
-    endType: "never" // Default value
-  };
-  
-  // Remove the RRULE: prefix
-  const rrule = rruleString.replace("RRULE:", "");
-  
-  // Split the components
-  const parts = rrule.split(';');
-  
-  // Process each part
-  parts.forEach((part) => {
-    const [key, value] = part.split('=');
-    
-    switch (key) {
-      case "FREQ":
-        if (value === "DAILY") rule.type = "daily";
-        else if (value === "WEEKLY") rule.type = "weekly";
-        else if (value === "MONTHLY") rule.type = "monthly";
-        else rule.type = "custom";
-        break;
-      case "INTERVAL":
-        rule.interval = parseInt(value);
-        break;
-      case "BYDAY":
-        rule.weekdays = value.split(',');
-        break;
-      case "BYMONTHDAY":
-        rule.monthlyOption = "dayOfMonth";
-        break;
-      case "UNTIL":
-        // Parse the date format YYYYMMDDTHHMMSSZ
-        const year = parseInt(value.substring(0, 4));
-        const month = parseInt(value.substring(4, 6)) - 1; // 0-based month
-        const day = parseInt(value.substring(6, 8));
-        rule.endType = "afterDate";
-        rule.endDate = new Date(year, month, day);
-        break;
-      case "COUNT":
-        rule.endType = "afterOccurrences";
-        rule.occurrences = parseInt(value);
-        break;
-    }
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: SCOPES,
+    state: state
   });
-  
-  return rule;
-};
 
-// Convert a booking to a Google Calendar event
-export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEvent => {
-  const event: GoogleCalendarEvent = {
-    id: booking.id,
+  return authUrl;
+}
+
+// Function to get Google OAuth2 tokens from the authorization code
+export async function getGoogleOAuth2Tokens(clientId: string, clientSecret: string, redirectUri: string, code: string) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  try {
+    const { tokens } = await oauth2Client.getToken(code);
+    return tokens;
+  } catch (error: any) {
+    console.error("Failed to retrieve access token", error);
+    throw new Error(error.message);
+  }
+}
+
+// Function to create a Google Calendar event
+export async function createGoogleCalendarEvent(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
+  tokens: any,
+  booking: any
+) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  oauth2Client.setCredentials(tokens);
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  const event = {
     summary: booking.title,
+    location: booking.location,
     description: booking.description,
-    location: `${booking.roomName}, ${booking.location}`,
     start: {
-      dateTime: booking.start,
-      timeZone: 'UTC',
+      dateTime: booking.startTime,
+      timeZone: booking.timeZone,
     },
     end: {
-      dateTime: booking.end,
-      timeZone: 'UTC',
+      dateTime: booking.endTime,
+      timeZone: booking.timeZone,
     },
-    attendees: booking.attendees.map(email => ({ email })),
-  };
-  
-  // Add recurrence if booking is recurring
-  if (booking.isRecurring && booking.recurrencePattern) {
-    if (typeof booking.recurrencePattern === 'object') {
-      // If it's an advanced recurrence pattern object
-      const startDate = new Date(booking.start);
-      const rrule = generateRRuleString(booking.recurrencePattern as RecurrenceRule, startDate);
-      event.recurrence = [rrule];
-      
-      // Store exception dates in extended properties
-      if ((booking.recurrencePattern as RecurrenceRule).exceptionDates?.length > 0) {
-        if (!event.extendedProperties) {
-          event.extendedProperties = { private: {} };
-        }
-        if (!event.extendedProperties.private) {
-          event.extendedProperties.private = {};
-        }
-        event.extendedProperties.private.exceptionDates = JSON.stringify(
-          (booking.recurrencePattern as RecurrenceRule).exceptionDates
-        );
-      }
-    } else if (typeof booking.recurrencePattern === 'string') {
-      // Simple recurrence pattern as string
-      event.recurrence = [`RRULE:FREQ=${booking.recurrencePattern.toUpperCase()}`];
-    }
-  }
-  
-  // Add extended properties for equipment and catering
-  if (booking.equipment || booking.cateringRequested !== undefined) {
-    if (!event.extendedProperties) {
-      event.extendedProperties = { private: {} };
-    }
-    
-    if (booking.equipment) {
-      event.extendedProperties.private!.equipment = booking.equipment.join(',');
-    }
-    
-    if (booking.cateringRequested !== undefined) {
-      event.extendedProperties.private!.cateringRequested = booking.cateringRequested.toString();
-    }
-  }
-  
-  return event;
-};
-
-// Convert a Google Calendar event to a booking
-export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking => {
-  // Parse equipment and catering from extended properties
-  const equipment = event.extendedProperties?.private?.equipment
-    ? event.extendedProperties.private.equipment.split(',')
-    : undefined;
-    
-  const cateringRequested = event.extendedProperties?.private?.cateringRequested
-    ? event.extendedProperties.private.cateringRequested === 'true'
-    : false;
-    
-  // Check if event has recurrence
-  const isRecurring = !!event.recurrence && event.recurrence.length > 0;
-  let recurrencePattern: string | RecurrenceRule | undefined = undefined;
-  
-  if (isRecurring) {
-    if (event.recurrence[0].startsWith('RRULE:')) {
-      // Parse advanced recurrence rule
-      const pattern = parseRRuleString(event.recurrence[0]);
-      
-      // Parse exception dates if they exist
-      if (event.extendedProperties?.private?.exceptionDates) {
-        try {
-          const exceptionDates = JSON.parse(event.extendedProperties.private.exceptionDates);
-          pattern.exceptionDates = exceptionDates.map((date: string) => new Date(date));
-        } catch (e) {
-          console.error("Error parsing exception dates", e);
-          pattern.exceptionDates = [];
-        }
-      }
-      
-      recurrencePattern = pattern;
-    } else if (event.recurrence[0].startsWith('RRULE:FREQ=')) {
-      // Parse simple recurrence pattern
-      const frequencyPattern = event.recurrence[0].split('=')[1].toLowerCase();
-      recurrencePattern = frequencyPattern;
-    }
-  }
-  
-  return {
-    id: event.id,
-    title: event.summary,
-    description: event.description,
-    roomName: event.location.split(',')[0].trim(),
-    location: event.location.split(',').slice(1).join(',').trim(),
-    start: event.start.dateTime,
-    end: event.end.dateTime,
-    attendees: event.attendees.map(attendee => attendee.email),
-    status: 'upcoming',
-    createdBy: event.attendees[0]?.email,
-    equipment,
-    cateringRequested,
-    isRecurring,
-    recurrencePattern
-  };
-};
-
-// Create a calendar event
-export const createCalendarEvent = async (booking: Booking): Promise<string> => {
-  // In a real app, this would call the Google Calendar API
-  console.log(`[GOOGLE CALENDAR] Creating event: ${booking.title}`);
-  
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return mock event ID
-  return `gcal_${booking.id}`;
-};
-
-// Update a calendar event
-export const updateCalendarEvent = async (booking: Booking): Promise<boolean> => {
-  // In a real app, this would call the Google Calendar API
-  console.log(`[GOOGLE CALENDAR] Updating event: ${booking.title}`);
-  
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 600));
-  
-  return true;
-};
-
-// Delete a calendar event
-export const deleteCalendarEvent = async (eventId: string): Promise<boolean> => {
-  // In a real app, this would call the Google Calendar API
-  console.log(`[GOOGLE CALENDAR] Deleting event: ${eventId}`);
-  
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  return true;
-};
-
-// List events from Google Calendar within a date range
-export const listCalendarEvents = async (
-  start: Date,
-  end: Date,
-  calendarId: string = 'primary'
-): Promise<GoogleCalendarEvent[]> => {
-  // In a real app, this would call the Google Calendar API
-  console.log(`[GOOGLE CALENDAR] Listing events from ${start.toISOString()} to ${end.toISOString()}`);
-  
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Return mock events
-  return [
-    {
-      id: 'gcal_ext_1',
-      summary: 'External Team Meeting',
-      description: 'Discuss project timeline with external partners',
-      location: 'Conference Room A, 2nd Floor',
-      start: {
-        dateTime: new Date(start.getTime() + 3600000).toISOString(), // 1 hour after start
-        timeZone: 'UTC',
-      },
-      end: {
-        dateTime: new Date(start.getTime() + 7200000).toISOString(), // 2 hours after start
-        timeZone: 'UTC',
-      },
-      attendees: [
-        { email: 'external1@client.com', responseStatus: 'accepted' },
-        { email: 'external2@client.com', responseStatus: 'tentative' },
-        { email: 'user@company.com', responseStatus: 'accepted' },
+    recurrence: [
+      createRecurrenceRule(booking)
+    ],
+    attendees: booking.attendees ? booking.attendees.map((email: string) => ({ email })) : [],
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'email', minutes: 24 * 60 },
+        { method: 'popup', minutes: 10 },
       ],
     },
-    {
-      id: 'gcal_ext_2',
-      summary: 'Product Planning',
-      description: 'Quarterly product roadmap planning',
-      location: 'Meeting Room B, 2nd Floor',
-      start: {
-        dateTime: new Date(start.getTime() + 86400000).toISOString(), // 1 day after start
-        timeZone: 'UTC',
-      },
-      end: {
-        dateTime: new Date(start.getTime() + 86400000 + 5400000).toISOString(), // 1 day + 1.5 hours after start
-        timeZone: 'UTC',
-      },
-      attendees: [
-        { email: 'product@company.com', responseStatus: 'accepted' },
-        { email: 'engineering@company.com', responseStatus: 'accepted' },
-        { email: 'user@company.com', responseStatus: 'accepted' },
+  };
+
+  try {
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      requestBody: event,
+    });
+
+    console.log('Event created: %s', response.data.htmlLink);
+    return response.data;
+  } catch (error: any) {
+    console.error("Failed to create event", error);
+    throw new Error(error.message);
+  }
+}
+
+// Function to update a Google Calendar event
+export async function updateGoogleCalendarEvent(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
+  tokens: any,
+  eventId: string,
+  booking: any
+) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  oauth2Client.setCredentials(tokens);
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  const event = {
+    summary: booking.title,
+    location: booking.location,
+    description: booking.description,
+    start: {
+      dateTime: booking.startTime,
+      timeZone: booking.timeZone,
+    },
+    end: {
+      dateTime: booking.endTime,
+      timeZone: booking.timeZone,
+    },
+    recurrence: [
+      createRecurrenceRule(booking)
+    ],
+    attendees: booking.attendees ? booking.attendees.map((email: string) => ({ email })) : [],
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'email', minutes: 24 * 60 },
+        { method: 'popup', minutes: 10 },
       ],
     },
-  ];
-};
-
-// Sync two-way with Google Calendar
-export const syncWithGoogleCalendar = async (
-  bookings: Booking[],
-  start: Date,
-  end: Date,
-): Promise<{
-  added: Booking[],
-  updated: Booking[],
-  removed: string[],
-}> => {
-  // In a real app, this would perform a two-way sync with Google Calendar
-  console.log(`[GOOGLE CALENDAR] Syncing between ${start.toISOString()} and ${end.toISOString()}`);
-  
-  // 1. Get events from Google Calendar
-  const googleEvents = await listCalendarEvents(start, end);
-  
-  // 2. Convert to bookings
-  const googleBookings = googleEvents.map(convertGoogleEventToBooking);
-  
-  // Simulate new, updated and removed events
-  // In a real implementation, this would compare the Google events with local bookings
-  const added = googleBookings.filter(b => !bookings.some(existing => existing.id === b.id));
-  const updated: Booking[] = [];
-  const removed: string[] = ['gcal_deleted_1'];
-  
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1200));
-  
-  return {
-    added,
-    updated,
-    removed,
   };
+
+  try {
+    const response = await calendar.events.update({
+      calendarId: 'primary',
+      eventId: eventId,
+      requestBody: event,
+    });
+
+    console.log('Event updated: %s', response.data.htmlLink);
+    return response.data;
+  } catch (error: any) {
+    console.error("Failed to update event", error);
+    throw new Error(error.message);
+  }
+}
+
+// Function to delete a Google Calendar event
+export async function deleteGoogleCalendarEvent(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
+  tokens: any,
+  eventId: string
+) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  oauth2Client.setCredentials(tokens);
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  try {
+    await calendar.events.delete({
+      calendarId: 'primary',
+      eventId: eventId,
+    });
+
+    console.log('Event deleted');
+    return true;
+  } catch (error: any) {
+    console.error("Failed to delete event", error);
+    throw new Error(error.message);
+  }
+}
+
+// Function to list events from a Google Calendar
+export async function listGoogleCalendarEvents(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
+  tokens: any,
+  timeMin: string,
+  timeMax: string,
+  q?: string
+) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  oauth2Client.setCredentials(tokens);
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  try {
+    const response = await calendar.events.list({
+      calendarId: 'primary',
+      timeMin: timeMin,
+      timeMax: timeMax,
+      q: q,
+      singleEvents: true,
+      orderBy: 'startTime',
+    });
+
+    const events = response.data.items;
+    if (!events || events.length === 0) {
+      console.log('No events found.');
+      return [];
+    }
+    console.log('Upcoming events:');
+    events.map((event: any, i: number) => {
+      const start = event.start.dateTime || event.start.date;
+      console.log(`${start} - ${event.summary}`);
+    });
+    return events;
+  } catch (error: any) {
+    console.error("Failed to list events", error);
+    throw new Error(error.message);
+  }
+}
+
+// Function to watch for changes on a calendar
+export async function watchGoogleCalendar(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
+  tokens: any,
+  channelId: string,
+  webhookUrl: string
+) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  oauth2Client.setCredentials(tokens);
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  const watchParams = {
+    calendarId: 'primary',
+    requestBody: {
+      id: channelId, // Your channel ID
+      type: 'web_hook',
+      address: webhookUrl, // Your webhook URL
+    },
+  };
+
+  try {
+    const response = await calendar.events.watch(watchParams);
+    console.log('Watching calendar with channel ID: %s', channelId);
+    return response.data;
+  } catch (error: any) {
+    console.error("Failed to watch calendar", error);
+    throw new Error(error.message);
+  }
+}
+
+// Function to stop watching a calendar
+export async function stopGoogleCalendarWatch(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
+  tokens: any,
+  channelId: string,
+  resourceId: string
+) {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  oauth2Client.setCredentials(tokens);
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  try {
+    await calendar.channels.stop({
+      requestBody: {
+        id: channelId, // The channel ID you want to stop
+        resourceId: resourceId, // The resource ID of the channel
+      },
+    });
+    console.log('Stopped watching calendar channel ID: %s', channelId);
+    return true;
+  } catch (error: any) {
+    console.error("Failed to stop watching calendar", error);
+    throw new Error(error.message);
+  }
+}
+
+// Helper function to parse days of week from array to RRule format
+const parseDaysOfWeek = (daysOfWeek: string[]) => {
+  return daysOfWeek.map(day => {
+    switch (day) {
+      case "SU": return RRule.SU;
+      case "MO": return RRule.MO;
+      case "TU": return RRule.TU;
+      case "WE": return RRule.WE;
+      case "TH": return RRule.TH;
+      case "FR": return RRule.FR;
+      case "SA": return RRule.SA;
+      default: return null;
+    }
+  }).filter(day => day !== null);
 };
 
-// Get OAuth URL for Google Calendar
-export const getGoogleCalendarAuthUrl = (): string => {
-  // In a real app, this would generate an OAuth URL for Google Calendar
-  return 'https://accounts.google.com/o/oauth2/auth?client_id=MOCK_CLIENT_ID&redirect_uri=https://meetingmaster.app/oauth/callback&scope=https://www.googleapis.com/auth/calendar&response_type=code';
+// Helper function to create a recurrence rule string based on the booking details
+const createRecurrenceRule = (booking: any): string => {
+  if (!booking.recurrencePattern) {
+    return ""; // Return empty string if no recurrence pattern
+  }
+  
+  // Fix for lines ~175, ~183: Add null checks
+  if (booking.recurrencePattern && booking.recurrencePattern.type === "weekly") {
+    const weeklyRule = new RRule({
+      freq: RRule.WEEKLY,
+      interval: booking.recurrencePattern ? booking.recurrencePattern.interval : 1,
+      byweekday: parseDaysOfWeek(booking.recurrencePattern.daysOfWeek),
+      until: new Date(booking.recurrenceEndDate)
+    });
+    
+    return weeklyRule.toString();
+  }
+  
+  if (booking.recurrencePattern && booking.recurrencePattern.type === "monthly") {
+    // Monthly recurrence logic here
+    let monthlyRule;
+    if (booking.recurrencePattern.monthlyType === 'byDayOfMonth') {
+      // Monthly by day of the month
+      monthlyRule = new RRule({
+        freq: RRule.MONTHLY,
+        dtstart: new Date(booking.startTime),
+        interval: booking.recurrencePattern ? booking.recurrencePattern.interval : 1,
+        bymonthday: [new Date(booking.startTime).getDate()],
+        until: new Date(booking.recurrenceEndDate)
+      });
+    } else {
+      // Monthly by day of the week
+      const dayOfWeek = new Date(booking.startTime).getDay();
+      const weekNumber = Math.floor((new Date(booking.startTime).getDate() - 1) / 7) + 1;
+      
+      const byweekday: any = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU][dayOfWeek];
+      
+      monthlyRule = new RRule({
+        freq: RRule.MONTHLY,
+        dtstart: new Date(booking.startTime),
+        interval: booking.recurrencePattern ? booking.recurrencePattern.interval : 1,
+        byweekday: byweekday.nth(weekNumber),
+        until: new Date(booking.recurrenceEndDate)
+      });
+    }
+    
+    return monthlyRule.toString();
+  }
+  
+  // Fix for line ~263: Convert RecurrenceRule to string
+  const rule = new RRule({
+    freq: RRule.DAILY,
+    interval: booking.recurrencePattern ? booking.recurrencePattern.interval : 1,
+    until: new Date(booking.recurrenceEndDate)
+  });
+  
+  return rule.toString(); // Ensure we always return a string
 };
 
-// Complete OAuth flow for Google Calendar
-export const completeGoogleCalendarAuth = async (code: string): Promise<boolean> => {
-  // In a real app, this would exchange the code for tokens
-  console.log(`[GOOGLE CALENDAR] Completing OAuth flow with code: ${code}`);
-  
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  return true;
-};
+// Function to fetch all events from a Google Calendar within a specified range
+export async function getAllGoogleCalendarEvents(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string,
+  tokens: any,
+  timeMin: string,
+  timeMax: string
+): Promise<any[]> {
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri
+  );
+
+  oauth2Client.setCredentials(tokens);
+
+  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+  let allEvents: any[] = [];
+  let pageToken: string | undefined = undefined;
+
+  try {
+    do {
+      const response = await calendar.events.list({
+        calendarId: 'primary',
+        timeMin: timeMin,
+        timeMax: timeMax,
+        singleEvents: true,
+        orderBy: 'startTime',
+        pageToken: pageToken,
+      });
+
+      const events = response.data.items;
+      if (events) {
+        allEvents = allEvents.concat(events);
+      }
+      pageToken = response.data.nextPageToken;
+    } while (pageToken);
+
+    return allEvents;
+  } catch (error: any) {
+    console.error("Failed to fetch all events", error);
+    throw new Error(error.message);
+  }
+}

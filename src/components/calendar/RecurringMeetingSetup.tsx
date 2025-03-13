@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { addDays, addWeeks, addMonths, format, isSameDay, isWithinInterval, parseISO, setHours, setMinutes } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -866,4 +867,21 @@ export function RecurringMeetingSetup({
         <Info className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
         <div>
           <h4 className="text-sm font-medium">About this recurring meeting</h4>
-          <p
+          <p className="text-sm text-muted-foreground mt-1">
+            {ruleDescription}
+          </p>
+          {conflictDates.length > 0 && (
+            <p className="text-sm text-destructive mt-1">
+              Warning: {conflictDates.length} instance{conflictDates.length !== 1 ? 's' : ''} of this meeting conflict{conflictDates.length === 1 ? 's' : ''} with existing bookings.
+            </p>
+          )}
+          {previewDates.length === maxOccurrences && (
+            <p className="text-sm text-amber-500 mt-1">
+              Note: This series has reached the maximum allowed {maxOccurrences} occurrences.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,3 +1,4 @@
+
 import { RRule, RRuleSet, rrulestr } from 'rrule'
 import { google } from 'googleapis';
 import { OAuth2Client } from 'googleapis-common';
@@ -374,7 +375,7 @@ const createRecurrenceRule = (booking: any): string => {
     return monthlyRule.toString();
   }
   
-  // Fix for line ~263: Convert RecurrenceRule to string
+  // Fix the return type: Convert RecurrenceRule to string
   const rule = new RRule({
     freq: RRule.DAILY,
     interval: booking.recurrencePattern ? booking.recurrencePattern.interval : 1,

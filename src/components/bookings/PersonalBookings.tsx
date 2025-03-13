@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookingFilters } from "./BookingFilters";
 import { BookingsCalendar } from "./BookingsCalendar";
 import { BookingDetails } from "./BookingDetails";
+import { BookingsList } from "./BookingsList";
+import { ResponsiveBookingsList } from "./ResponsiveBookingsList";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface Booking {
   id: string;
@@ -24,9 +27,14 @@ export interface Booking {
   checkedInAt?: string;
   checkedOut?: boolean;
   checkedOutAt?: string;
+  equipment?: string[];
+  cateringRequested?: boolean;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
 }
 
-// Sample bookings data
+export type BookingStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+
 const SAMPLE_BOOKINGS: Booking[] = [
   {
     id: "1",
@@ -35,9 +43,12 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Conference Room A",
     location: "2nd Floor",
     start: addDays(new Date(), 1).toISOString(),
-    end: addDays(new Date(), 1).setHours(11, 0, 0, 0).toISOString(),
+    end: new Date(addDays(new Date(), 1).setHours(11, 0, 0, 0)).toISOString(),
     attendees: ["john.doe@example.com", "jane.smith@example.com"],
     status: "upcoming",
+    equipment: ["projector", "whiteboard"],
+    cateringRequested: false,
+    isRecurring: false
   },
   {
     id: "2",
@@ -46,11 +57,15 @@ const SAMPLE_BOOKINGS: Booking[] = [
     roomName: "Training Room 1",
     location: "3rd Floor",
     start: new Date().toISOString(),
-    end: new Date().setHours(17, 0, 0, 0).toISOString(),
+    end: new Date(new Date().setHours(17, 0, 0, 0)).toISOString(),
     attendees: ["mark.johnson@example.com", "lisa.brown@example.com"],
     status: "ongoing",
     checkedIn: true,
-    checkedInAt: new Date().setHours(9, 0, 0, 0).toISOString(),
+    checkedInAt: new Date(new Date().setHours(9, 0, 0, 0)).toISOString(),
+    equipment: ["projector", "microphone"],
+    cateringRequested: true,
+    isRecurring: true,
+    recurrencePattern: "weekly"
   },
   {
     id: "3",
@@ -145,6 +160,8 @@ const SAMPLE_BOOKINGS: Booking[] = [
 export function PersonalBookings() {
   const [activeFilter, setActiveFilter] = useState<"upcoming" | "past" | "all">("upcoming");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const isMobile = useIsMobile();
+  const [viewBookingId, setViewBookingId] = useState<string | null>(null);
 
   const handleFilterChange = (filter: "upcoming" | "past" | "all") => {
     setActiveFilter(filter);
@@ -170,51 +187,29 @@ export function PersonalBookings() {
   };
 
   const handleCancelBooking = (bookingId: string, reason?: string) => {
-    // Implement your cancellation logic here
     console.log(`Booking ${bookingId} cancelled with reason: ${reason}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleCheckIn = (bookingId: string) => {
-    // Implement your check-in logic here
     console.log(`Checking in for booking ${bookingId}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleCheckOut = (bookingId: string) => {
-    // Implement your check-out logic here
     console.log(`Checking out for booking ${bookingId}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleDuplicateBooking = (bookingId: string) => {
-    // Implement your duplicate logic here
     console.log(`Duplicating booking ${bookingId}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
   };
 
   const handleShareBooking = (bookingId: string, method: 'email' | 'calendar') => {
-    // Implement your share logic here
     console.log(`Sharing booking ${bookingId} via ${method}`);
-    // Open email client or add to calendar
   };
 
   const handleSetReminder = (bookingId: string, minutes?: number) => {
-    // Implement your set reminder logic here
     console.log(`Setting reminder for booking ${bookingId} ${minutes ? `before ${minutes} minutes` : ''}`);
-    // Set a local notification or use a service to send a reminder
   };
 
-  // Let's create a responsive version of the component
-import { BookingsList } from "./BookingsList";
-import { ResponsiveBookingsList } from "./ResponsiveBookingsList";
-import { useIsMobile } from "@/hooks/use-mobile";
-
-  // Add this to your component before the return statement:
-  const isMobile = useIsMobile();
-  const [viewBookingId, setViewBookingId] = useState<string | null>(null);
-
-  // Update the return statement to conditionally render the appropriate list
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -269,7 +264,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
         </TabsContent>
       </Tabs>
 
-      {/* Booking Details */}
       {viewBookingId && (
         <BookingDetails
           bookingId={viewBookingId}

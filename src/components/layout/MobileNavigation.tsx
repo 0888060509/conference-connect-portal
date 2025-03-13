@@ -30,7 +30,8 @@ export function MobileNavigation() {
   ];
 
   // Add admin section if user is admin
-  if (user?.isAdmin) {
+  // Check for admin role in a safer way
+  if (user && (user as any).isAdmin) {
     navItems.push({ 
       name: "Admin", 
       icon: Search, 

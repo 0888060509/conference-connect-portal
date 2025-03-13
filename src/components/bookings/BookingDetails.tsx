@@ -119,10 +119,10 @@ export function BookingDetails({
             </div>
             <div className="space-y-1">
               {booking.attendees.map((attendee) => (
-                <div key={attendee.id} className="flex items-center gap-2 text-sm">
+                <div key={attendee} className="flex items-center gap-2 text-sm">
                   <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>{attendee.name}</span>
-                  {attendee.id === "1" && <Badge variant="outline" className="text-xs">You</Badge>}
+                  <span>{attendee}</span>
+                  {attendee === "john.doe@example.com" && <Badge variant="outline" className="text-xs">You</Badge>}
                 </div>
               ))}
             </div>
@@ -130,7 +130,7 @@ export function BookingDetails({
           
           {/* Equipment & Catering */}
           <div className="grid grid-cols-2 gap-4">
-            {booking.equipment.length > 0 && (
+            {booking.equipment && booking.equipment.length > 0 && (
               <div className="space-y-2">
                 <div className="font-medium flex items-center gap-2">
                   <Monitor className="h-4 w-4 text-muted-foreground" />
@@ -166,7 +166,7 @@ export function BookingDetails({
                 <span>Recurrence</span>
               </div>
               <div className="text-sm capitalize">
-                Repeats {booking.recurrencePattern}
+                Repeats {booking.recurrencePattern || "weekly"}
               </div>
             </div>
           )}

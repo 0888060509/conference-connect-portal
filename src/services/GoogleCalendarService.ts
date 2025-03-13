@@ -93,11 +93,12 @@ const generateRRuleString = (rule: RecurrenceRule, startDate: Date): string => {
 };
 
 // Helper to parse RRule string from Google Calendar
-const parseRRuleString = (rruleString: string): Partial<RecurrenceRule> => {
-  const rule: Partial<RecurrenceRule> = {
+const parseRRuleString = (rruleString: string): RecurrenceRule => {
+  const rule: RecurrenceRule = {
     type: "weekly",
     interval: 1,
     exceptionDates: [],
+    endType: "never" // Default value
   };
   
   // Remove the RRULE: prefix
@@ -141,11 +142,6 @@ const parseRRuleString = (rruleString: string): Partial<RecurrenceRule> => {
     }
   });
   
-  // If no end condition was specified
-  if (!rule.endType) {
-    rule.endType = "never";
-  }
-  
   return rule;
 };
 
@@ -169,10 +165,10 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
   
   // Add recurrence if booking is recurring
   if (booking.isRecurring) {
-    if (booking.recurrencePattern) {
-      // If it's an advanced recurrence pattern
+    if (booking.recurrencePattern && typeof booking.recurrencePattern === 'object') {
+      // If it's an advanced recurrence pattern object
       const startDate = new Date(booking.start);
-      const rrule = generateRRuleString(booking.recurrencePattern as any, startDate);
+      const rrule = generateRRuleString(booking.recurrencePattern as RecurrenceRule, startDate);
       event.recurrence = [rrule];
       
       // Store exception dates in extended properties
@@ -187,8 +183,8 @@ export const convertBookingToGoogleEvent = (booking: Booking): GoogleCalendarEve
           booking.recurrencePattern.exceptionDates
         );
       }
-    } else if (booking.recurrencePattern) {
-      // Simple recurrence pattern
+    } else if (booking.recurrencePattern && typeof booking.recurrencePattern === 'string') {
+      // Simple recurrence pattern as string
       event.recurrence = [`RRULE:FREQ=${booking.recurrencePattern.toUpperCase()}`];
     }
   }
@@ -234,21 +230,16 @@ export const convertGoogleEventToBooking = (event: GoogleCalendarEvent): Booking
     if (event.extendedProperties?.private?.exceptionDates) {
       try {
         const exceptionDates = JSON.parse(event.extendedProperties.private.exceptionDates);
-        // Ensure recurrencePattern is an object before accessing exceptionDates
-        if (typeof recurrencePattern === 'object' && recurrencePattern !== null) {
-          recurrencePattern.exceptionDates = exceptionDates.map((date: string) => new Date(date));
-        }
+        recurrencePattern.exceptionDates = exceptionDates.map((date: string) => new Date(date));
       } catch (e) {
         console.error("Error parsing exception dates", e);
-        // Ensure recurrencePattern is an object before setting exceptionDates
-        if (typeof recurrencePattern === 'object' && recurrencePattern !== null) {
-          recurrencePattern.exceptionDates = [];
-        }
+        recurrencePattern.exceptionDates = [];
       }
     }
   } else if (isRecurring && event.recurrence[0].startsWith('RRULE:FREQ=')) {
     // Parse simple recurrence pattern
-    recurrencePattern = event.recurrence[0].split('=')[1].toLowerCase();
+    const frequencyPattern = event.recurrence[0].split('=')[1].toLowerCase();
+    recurrencePattern = frequencyPattern;
   }
   
   return {

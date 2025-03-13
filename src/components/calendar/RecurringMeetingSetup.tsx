@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { addDays, addWeeks, addMonths, format, isSameDay, isWithinInterval, parseISO, setHours, setMinutes } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -60,10 +59,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
-// Define maximum recurring instances to prevent excessive bookings
-const MAX_RECURRING_INSTANCES = 52;  // E.g., weekly for 1 year
-
-// Days of the week for weekly recurrence
+const MAX_RECURRING_INSTANCES = 52;
 const DAYS_OF_WEEK = [
   { value: "MO", label: "Monday" },
   { value: "TU", label: "Tuesday" },
@@ -73,33 +69,26 @@ const DAYS_OF_WEEK = [
   { value: "SA", label: "Saturday" },
   { value: "SU", label: "Sunday" },
 ];
-
-// For monthly recurrence options
 const MONTHLY_OPTIONS = [
   { value: "dayOfMonth", label: "On day of month" },
   { value: "dayOfWeek", label: "On day of week" },
 ];
-
-// For end recurrence options
 const END_RECURRENCE_OPTIONS = [
   { value: "afterDate", label: "End by date" },
   { value: "afterOccurrences", label: "End after number of occurrences" },
   { value: "never", label: "No end date" },
 ];
-
-// Sample blackout dates (holidays, unavailable periods)
-// In a real app, these would come from an API
 const BLACKOUT_DATES = [
-  new Date(2023, 11, 25), // Christmas
-  new Date(2024, 0, 1),   // New Year's Day
-  new Date(2024, 4, 27),  // Memorial Day
-  new Date(2024, 6, 4),   // Independence Day
+  new Date(2023, 11, 25),
+  new Date(2024, 0, 1),
+  new Date(2024, 4, 27),
+  new Date(2024, 6, 4),
 ];
 
 export interface RecurrencePattern {
   type: "daily" | "weekly" | "monthly" | "custom";
-  interval: number;  // Every X days/weeks/months
-  weekdays?: string[];  // For weekly: ["MO", "WE", "FR"]
+  interval: number;
+  weekdays?: string[];
   monthlyOption?: "dayOfMonth" | "dayOfWeek";
   endType: "afterDate" | "afterOccurrences" | "never";
   endDate?: Date;
@@ -109,8 +98,8 @@ export interface RecurrencePattern {
 
 export interface RecurringMeetingSetupProps {
   startDate: Date;
-  startTime: string; // e.g. "09:00"
-  endTime: string;   // e.g. "10:00"
+  startTime: string;
+  endTime: string;
   existingBookings?: Array<{
     start: string;
     end: string;
@@ -134,7 +123,6 @@ export function RecurringMeetingSetup({
   isEnabled,
   currentTimezone = "UTC"
 }: RecurringMeetingSetupProps) {
-  // Initialize recurrence pattern
   const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>({
     type: "weekly",
     interval: 1,
@@ -145,13 +133,11 @@ export function RecurringMeetingSetup({
     exceptionDates: [],
   });
 
-  // State for calendar preview and conflicts
   const [previewDates, setPreviewDates] = useState<Date[]>([]);
   const [conflictDates, setConflictDates] = useState<Date[]>([]);
   const [showConflicts, setShowConflicts] = useState(false);
   const [ruleDescription, setRuleDescription] = useState("");
 
-  // Calculate preview dates when pattern changes
   useEffect(() => {
     if (!isEnabled) {
       setPreviewDates([]);
@@ -162,23 +148,18 @@ export function RecurringMeetingSetup({
     const dates = generateOccurrences(recurrencePattern, startDate);
     setPreviewDates(dates);
     
-    // Find conflicts with existing bookings
     const conflicts = findConflicts(dates, existingBookings, roomId, startTime, endTime);
     setConflictDates(conflicts);
     
-    // Generate human-readable description
     const description = generateRuleDescription(recurrencePattern, startDate);
     setRuleDescription(description);
     
-    // Send the updated pattern back to the parent
     onPatternChange(recurrencePattern);
   }, [recurrencePattern, startDate, isEnabled, existingBookings, roomId, startTime, endTime, onPatternChange]);
 
-  // Change handler for the recurrence pattern
   const handlePatternChange = (changes: Partial<RecurrencePattern>) => {
     const newPattern = { ...recurrencePattern, ...changes };
     
-    // Enforce maximum occurrences
     if (newPattern.endType === "afterOccurrences" && 
         newPattern.occurrences && 
         newPattern.occurrences > maxOccurrences) {
@@ -193,7 +174,6 @@ export function RecurringMeetingSetup({
     setRecurrencePattern(newPattern);
   };
 
-  // Toggle an exception date
   const toggleExceptionDate = (date: Date) => {
     const exceptions = [...recurrencePattern.exceptionDates];
     const exists = exceptions.some(d => isSameDay(d, date));
@@ -209,7 +189,6 @@ export function RecurringMeetingSetup({
     }
   };
 
-  // Generate human-readable description of the recurrence rule
   const generateRuleDescription = (pattern: RecurrencePattern, baseDate: Date): string => {
     let description = "";
     
@@ -265,7 +244,6 @@ export function RecurringMeetingSetup({
         break;
     }
     
-    // Add end condition
     if (pattern.endType === "afterDate" && pattern.endDate) {
       description += ` until ${format(pattern.endDate, "MMMM d, yyyy")}`;
     } else if (pattern.endType === "afterOccurrences" && pattern.occurrences) {
@@ -274,7 +252,6 @@ export function RecurringMeetingSetup({
       description += " (no end date)";
     }
     
-    // Add exceptions if any
     if (pattern.exceptionDates.length > 0) {
       const exceptionsText = pattern.exceptionDates.length === 1 
         ? "1 exception date" 
@@ -286,29 +263,25 @@ export function RecurringMeetingSetup({
     return description;
   };
 
-  // Generate occurrence dates based on the recurrence pattern
   const generateOccurrences = (pattern: RecurrencePattern, baseDate: Date): Date[] => {
     const dates: Date[] = [];
     let currentDate = new Date(baseDate);
     let occurrenceCount = 0;
     
-    // Function to check if we should continue generating occurrences
     const shouldContinue = () => {
       if (pattern.endType === "afterDate" && pattern.endDate) {
         return currentDate <= pattern.endDate;
       } else if (pattern.endType === "afterOccurrences" && pattern.occurrences) {
         return occurrenceCount < pattern.occurrences;
       } else if (pattern.endType === "never") {
-        return occurrenceCount < maxOccurrences; // Safety limit
+        return occurrenceCount < maxOccurrences;
       }
       return false;
     };
     
-    // Add first occurrence (the base date itself)
     dates.push(new Date(baseDate));
     occurrenceCount++;
     
-    // Generate the rest of occurrences
     while (shouldContinue() && occurrenceCount < maxOccurrences) {
       switch (pattern.type) {
         case "daily":
@@ -316,18 +289,15 @@ export function RecurringMeetingSetup({
           break;
         case "weekly":
           if (pattern.weekdays && pattern.weekdays.length > 1) {
-            // For multiple days per week
             const currentDayValue = DAYS_OF_WEEK[currentDate.getDay() === 0 ? 6 : currentDate.getDay() - 1].value;
             const currentDayIndex = pattern.weekdays.indexOf(currentDayValue);
             
             if (currentDayIndex < pattern.weekdays.length - 1) {
-              // Move to next selected day in current week
               const nextDayValue = pattern.weekdays[currentDayIndex + 1];
               const nextDayIndex = DAYS_OF_WEEK.findIndex(d => d.value === nextDayValue);
               const daysToAdd = (nextDayIndex + 1) % 7 - (currentDate.getDay() === 0 ? 7 : currentDate.getDay());
               currentDate = addDays(currentDate, daysToAdd > 0 ? daysToAdd : daysToAdd + 7);
             } else {
-              // Move to first selected day in next week(s)
               currentDate = addWeeks(currentDate, pattern.interval);
               const firstDayValue = pattern.weekdays[0];
               const firstDayIndex = DAYS_OF_WEEK.findIndex(d => d.value === firstDayValue);
@@ -335,7 +305,6 @@ export function RecurringMeetingSetup({
               currentDate = addDays(currentDate, daysToAdd > 0 ? daysToAdd : daysToAdd + 7);
             }
           } else {
-            // For single day per week
             currentDate = addWeeks(currentDate, pattern.interval);
           }
           break;
@@ -343,12 +312,10 @@ export function RecurringMeetingSetup({
           currentDate = addMonths(currentDate, pattern.interval);
           break;
         case "custom":
-          // For custom we'd implement complex logic, but use weekly for now
           currentDate = addWeeks(currentDate, pattern.interval);
           break;
       }
       
-      // Skip exception dates
       if (!pattern.exceptionDates.some(d => isSameDay(d, currentDate))) {
         dates.push(new Date(currentDate));
         occurrenceCount++;
@@ -358,7 +325,6 @@ export function RecurringMeetingSetup({
     return dates;
   };
 
-  // Find conflicts with existing bookings
   const findConflicts = (
     dates: Date[], 
     bookings: Array<{start: string, end: string, roomId: string}>, 
@@ -366,7 +332,6 @@ export function RecurringMeetingSetup({
     eventStartTime: string,
     eventEndTime: string
   ): Date[] => {
-    // Convert booking times to Date objects for comparison
     return dates.filter(date => {
       const [startHour, startMinute] = eventStartTime.split(":").map(Number);
       const [endHour, endMinute] = eventEndTime.split(":").map(Number);
@@ -374,15 +339,12 @@ export function RecurringMeetingSetup({
       const eventStart = setMinutes(setHours(new Date(date), startHour), startMinute);
       const eventEnd = setMinutes(setHours(new Date(date), endHour), endMinute);
       
-      // Check if this date conflicts with any existing booking
       return bookings.some(booking => {
-        // Only check bookings for the same room
         if (booking.roomId !== currentRoomId) return false;
         
         const bookingStart = new Date(booking.start);
         const bookingEnd = new Date(booking.end);
         
-        // Check for overlap
         return (
           (eventStart < bookingEnd && eventEnd > bookingStart) ||
           (bookingStart < eventEnd && bookingEnd > eventStart)
@@ -391,7 +353,10 @@ export function RecurringMeetingSetup({
     });
   };
 
-  // Only render if recurring meetings are enabled
+  const isDateInArray = (date: Date, dateArray: Date[]) => {
+    return dateArray.some(d => isSameDay(d, date));
+  };
+
   if (!isEnabled) return null;
 
   return (
@@ -407,7 +372,6 @@ export function RecurringMeetingSetup({
           <CardDescription>Define how often this meeting repeats</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Recurrence type selection */}
           <div className="space-y-2">
             <Label>Recurrence Type</Label>
             <RadioGroup 
@@ -415,7 +379,6 @@ export function RecurringMeetingSetup({
               onValueChange={(value) => 
                 handlePatternChange({ 
                   type: value as RecurrencePattern["type"],
-                  // Reset weekdays when switching from weekly to another type
                   weekdays: value === "weekly" 
                     ? [DAYS_OF_WEEK[startDate.getDay() === 0 ? 6 : startDate.getDay() - 1].value] 
                     : undefined
@@ -457,7 +420,6 @@ export function RecurringMeetingSetup({
             </RadioGroup>
           </div>
           
-          {/* Interval selection */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Repeat every</Label>
@@ -484,7 +446,6 @@ export function RecurringMeetingSetup({
               </div>
             </div>
             
-            {/* Weekly recurrence day selection */}
             {recurrencePattern.type === "weekly" && (
               <div className="space-y-2 col-span-2">
                 <Label>On these days</Label>
@@ -498,7 +459,6 @@ export function RecurringMeetingSetup({
                       onClick={() => {
                         const weekdays = [...(recurrencePattern.weekdays || [])];
                         if (weekdays.includes(day.value)) {
-                          // Prevent removing the last selected day
                           if (weekdays.length > 1) {
                             handlePatternChange({ 
                               weekdays: weekdays.filter(d => d !== day.value) 
@@ -518,7 +478,6 @@ export function RecurringMeetingSetup({
               </div>
             )}
             
-            {/* Monthly recurrence options */}
             {recurrencePattern.type === "monthly" && (
               <div className="space-y-2 col-span-2">
                 <Label>Monthly options</Label>
@@ -551,7 +510,6 @@ export function RecurringMeetingSetup({
             )}
           </div>
           
-          {/* End recurrence options */}
           <div className="space-y-2">
             <Label>End Recurrence</Label>
             <RadioGroup 
@@ -645,16 +603,17 @@ export function RecurringMeetingSetup({
         </CardContent>
       </Card>
       
-      {/* Exception dates section */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-md flex items-center">
-            <CalendarX className="h-4 w-4 mr-2" />
-            Exception Dates
-          </CardTitle>
-          <CardDescription>
-            Exclude specific dates from the recurrence pattern
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-md flex items-center">
+              <CalendarX className="h-4 w-4 mr-2" />
+              Exception Dates
+            </CardTitle>
+            <CardDescription>
+              Exclude specific dates from the recurrence pattern
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -665,7 +624,6 @@ export function RecurringMeetingSetup({
               </p>
             </div>
             
-            {/* Display selected exception dates as badges */}
             {recurrencePattern.exceptionDates.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {recurrencePattern.exceptionDates.map((date, index) => (
@@ -687,7 +645,6 @@ export function RecurringMeetingSetup({
         </CardContent>
       </Card>
       
-      {/* Calendar preview */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -707,7 +664,6 @@ export function RecurringMeetingSetup({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Visual calendar preview of occurrences */}
           <div className="border rounded-md p-3">
             <Calendar
               mode="multiple"
@@ -719,9 +675,9 @@ export function RecurringMeetingSetup({
               }}
               className="pointer-events-auto"
               modifiers={{
-                conflict: conflictDates,
-                exception: recurrencePattern.exceptionDates,
-                blackout: BLACKOUT_DATES,
+                conflict: (date: Date) => isDateInArray(date, conflictDates),
+                exception: (date: Date) => isDateInArray(date, recurrencePattern.exceptionDates),
+                blackout: (date: Date) => isDateInArray(date, BLACKOUT_DATES),
               }}
               modifiersClassNames={{
                 conflict: "bg-destructive/20 text-destructive-foreground border border-destructive",
@@ -731,7 +687,6 @@ export function RecurringMeetingSetup({
             />
           </div>
           
-          {/* Legend for the calendar */}
           <div className="flex flex-wrap gap-4 mt-4 text-sm">
             <div className="flex items-center">
               <div className="w-4 h-4 rounded-sm bg-primary mr-2" />
@@ -751,7 +706,6 @@ export function RecurringMeetingSetup({
             </div>
           </div>
           
-          {/* Conflict detail button - only show if conflicts exist */}
           {conflictDates.length > 0 && (
             <div className="mt-4">
               <Button
@@ -806,7 +760,6 @@ export function RecurringMeetingSetup({
         </CardContent>
       </Card>
       
-      {/* Advanced options accordion */}
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value="advanced-options">
           <AccordionTrigger className="text-md">
@@ -862,7 +815,6 @@ export function RecurringMeetingSetup({
         </AccordionItem>
       </Accordion>
       
-      {/* Recurrence rule explanation */}
       <div className="bg-muted/30 p-4 rounded-md flex items-start">
         <Info className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
         <div>

@@ -353,7 +353,7 @@ export function RecurringMeetingSetup({
     });
   };
 
-  const isDateInArray = (date: Date, dateArray: Date[]) => {
+  const isDateInArray = (date: Date, dateArray: Date[]): boolean => {
     return dateArray.some(d => isSameDay(d, date));
   };
 

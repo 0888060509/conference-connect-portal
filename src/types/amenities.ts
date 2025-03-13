@@ -76,4 +76,3 @@ export interface AmenityRequest {
   response?: string;
   responseDate?: string;
 }
-

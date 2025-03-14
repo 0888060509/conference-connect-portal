@@ -28,6 +28,14 @@ export interface RecurrencePattern {
   exceptionDates: Date[];
 }
 
+export interface ConflictSuggestion {
+  startTime: string;
+  endTime: string;
+  roomId: string;
+  roomName: string;
+  type: 'time' | 'room';
+}
+
 // Function to fetch room availability for a specific date
 export const fetchRoomAvailability = async (
   roomIds: string[],
@@ -184,10 +192,12 @@ export const createBooking = async (
     
     if (booking.recurring) {
       // Create recurring pattern record
+      const patternType = booking.recurring.type === 'yearly' ? 'monthly' : booking.recurring.type;
+      
       const { data: recurringData, error: recurringError } = await supabaseClient
         .from('recurring_patterns')
         .insert({
-          pattern_type: booking.recurring.type,
+          pattern_type: patternType,
           interval: booking.recurring.interval,
           days_of_week: booking.recurring.weekdays ? JSON.stringify(booking.recurring.weekdays) : null,
           start_date: format(booking.startTime, 'yyyy-MM-dd'),
@@ -229,13 +239,15 @@ export const createBooking = async (
         status: 'invited'
       }));
       
-      const { error: attendeeError } = await supabaseClient
-        .from('booking_attendees')
-        .insert(attendeeRecords);
-      
-      if (attendeeError) {
-        console.error('Failed to add attendees:', attendeeError);
-        // Continue anyway as the booking was created
+      for (const attendee of attendeeRecords) {
+        const { error: attendeeError } = await supabaseClient
+          .from('booking_attendees')
+          .insert(attendee);
+        
+        if (attendeeError) {
+          console.error('Failed to add attendee:', attendeeError);
+          // Continue anyway as the booking was created
+        }
       }
     }
     
@@ -244,7 +256,7 @@ export const createBooking = async (
       .from('notifications')
       .insert({
         user_id: booking.userId,
-        type: 'booking_created',
+        type: 'confirmation',  // Use valid type for notifications table
         message: `Booking "${booking.title}" created successfully`,
         booking_id: bookingData.id,
         is_read: false
@@ -327,17 +339,17 @@ export const updateBooking = async (
       
       // Then add new attendees
       if (updates.attendees.length > 0) {
-        const attendeeRecords = updates.attendees.map(userId => ({
-          booking_id: bookingId,
-          user_id: userId,
-          status: 'invited'
-        }));
-        
-        const { error: insertError } = await supabaseClient
-          .from('booking_attendees')
-          .insert(attendeeRecords);
-        
-        if (insertError) throw insertError;
+        for (const userId of updates.attendees) {
+          const { error: insertError } = await supabaseClient
+            .from('booking_attendees')
+            .insert({
+              booking_id: bookingId,
+              user_id: userId,
+              status: 'invited'
+            });
+            
+          if (insertError) throw insertError;
+        }
       }
     }
     
@@ -375,7 +387,7 @@ export const cancelBooking = async (
         .from('notifications')
         .insert({
           user_id: booking.user_id,
-          type: 'booking_cancelled',
+          type: 'cancellation', // Use valid type for notifications table
           message: `Booking "${booking.title}" has been cancelled${reason ? `: ${reason}` : ''}`,
           booking_id: bookingId,
           is_read: false

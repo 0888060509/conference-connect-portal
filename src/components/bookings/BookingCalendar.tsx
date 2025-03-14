@@ -8,7 +8,7 @@ import { useCancelBooking, useUpdateBooking, useRealtimeCalendarUpdates, useGene
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 // Setup localizer for react-big-calendar
@@ -126,7 +126,7 @@ export function BookingCalendar() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-[600px]">
-        <Spinner size="lg" />
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
   }

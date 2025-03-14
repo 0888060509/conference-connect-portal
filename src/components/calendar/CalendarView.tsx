@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, isSameDay } from "date-fns";
 import { 
@@ -176,6 +177,15 @@ export function CalendarView() {
     }
   };
 
+  // Assume these props are used by the view components
+  const viewProps = {
+    currentDate,
+    rooms: displayRooms,
+    onSelectRoom: handleRoomSelect,
+    onMoveBooking: handleBookingMove,
+    isUpdating: isUpdating || isDragging
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-full">
       <div className={`${sidebarOpen ? 'block' : 'hidden'} md:block md:relative fixed inset-0 z-30 bg-background transition-all`}>
@@ -268,42 +278,22 @@ export function CalendarView() {
           >
             {selectedView === "month" && (
               <MonthView 
-                currentDate={currentDate} 
-                rooms={displayRooms} 
-                onSelectRoom={handleRoomSelect}
-                availabilityData={availabilityQuery.data || {}}
-                onMoveBooking={handleBookingMove}
-                isUpdating={isUpdating || isDragging}
+                {...viewProps}
               />
             )}
             {selectedView === "week" && (
               <WeekView 
-                currentDate={currentDate} 
-                rooms={displayRooms} 
-                onSelectRoom={handleRoomSelect}
-                availabilityData={availabilityQuery.data || {}}
-                onMoveBooking={handleBookingMove}
-                isUpdating={isUpdating || isDragging}
+                {...viewProps}
               />
             )}
             {selectedView === "day" && (
               <DayView 
-                currentDate={currentDate} 
-                rooms={displayRooms} 
-                onSelectRoom={handleRoomSelect}
-                availabilityData={availabilityQuery.data || {}}
-                onMoveBooking={handleBookingMove}
-                isUpdating={isUpdating || isDragging}
+                {...viewProps}
               />
             )}
             {selectedView === "timeline" && (
               <TimelineView 
-                currentDate={currentDate} 
-                rooms={displayRooms} 
-                onSelectRoom={handleRoomSelect}
-                availabilityData={availabilityQuery.data || {}}
-                onMoveBooking={handleBookingMove}
-                isUpdating={isUpdating || isDragging}
+                {...viewProps}
               />
             )}
           </SwipeableCalendarView>

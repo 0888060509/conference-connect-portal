@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -11,17 +12,15 @@ import { Calendar, Clock, Users, MapPin, Repeat, AlertCircle } from "lucide-reac
 import { RecurringMeetingSetup, RecurrencePattern } from "@/components/calendar/RecurringMeetingSetup";
 import { ConflictResolutionDialog } from "@/components/calendar/ConflictResolutionDialog";
 import { 
-  Booking, 
+  BookingConflict, 
   BookingPriority,
-  ConflictSuggestion,
-  checkBookingConflicts,
-  generateRoomSuggestions,
-  generateTimeSuggestions,
-  canOverrideBooking
-} from "@/services/conflictResolutionService";
+  RecurrencePattern as RecurrencePatternType,
+  ConflictSuggestion
+} from "@/services/calendarService";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { useCreateBooking, useUserSearch } from "@/hooks/use-calendar-backend";
 import { useAuth } from "@/contexts/auth";
+import { toast } from "sonner";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -37,35 +36,23 @@ interface BookingModalProps {
   endTime?: string;
 }
 
-// Mock bookings data for conflict checking
-const mockBookings: Booking[] = [
-  {
-    id: "booking-1",
-    roomId: "1",
-    title: "Team Meeting",
-    start: new Date(new Date().setHours(14, 0, 0, 0)),
-    end: new Date(new Date().setHours(15, 0, 0, 0)),
-    userId: "user-1",
-    priority: "normal"
-  },
-  {
-    id: "booking-2",
-    roomId: "2",
-    title: "Project Review",
-    start: new Date(new Date().setHours(10, 0, 0, 0)),
-    end: new Date(new Date().setHours(11, 30, 0, 0)),
-    userId: "user-2",
-    priority: "high"
-  }
+// Time options for the select dropdowns
+const timeOptions = [
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
+  "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
 ];
 
-// Mock rooms data for suggestions
-const mockRooms = [
-  { id: "1", name: "Executive Boardroom" },
-  { id: "2", name: "Conference Room Alpha" },
-  { id: "3", name: "Small Meeting Room" },
-  { id: "4", name: "Innovation Lab" }
-];
+// Define Booking interface for local use
+interface Booking {
+  id: string;
+  roomId: string;
+  title: string;
+  start: Date;
+  end: Date;
+  userId: string;
+  priority: BookingPriority;
+}
 
 export function BookingModal({ 
   isOpen, 
@@ -81,7 +68,7 @@ export function BookingModal({
   const [selectedEndTime, setSelectedEndTime] = useState(endTime);
   const [attendees, setAttendees] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
-  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern | null>(null);
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePatternType | null>(null);
   const [priority, setPriority] = useState<BookingPriority>("normal");
   
   // New state for conflict resolution
@@ -145,7 +132,7 @@ export function BookingModal({
       onClose();
     } else if (result.conflicts && result.conflicts.length > 0) {
       // Handle conflicts using the ConflictResolutionDialog
-      const conflictedBooking = {
+      const conflictedBookingData: Booking = {
         id: 'new-booking',
         roomId: room.id.toString(),
         title: bookingTitle,
@@ -155,19 +142,32 @@ export function BookingModal({
         priority: priority
       };
       
-      setConflictedBooking(conflictedBooking);
-      setExistingBooking(result.conflicts[0]);
+      setConflictedBooking(conflictedBookingData);
+      
+      // Convert BookingConflict to Booking type for existingBooking
+      const conflict = result.conflicts[0];
+      const existingBookingData: Booking = {
+        id: conflict.id,
+        roomId: room.id.toString(), // Assume same room as conflict is in same room
+        title: conflict.title,
+        start: conflict.start,
+        end: conflict.end,
+        userId: conflict.userId,
+        priority: conflict.priority
+      };
+      
+      setExistingBooking(existingBookingData);
       
       // Generate suggestions (this would come from the backend in a real app)
       setTimeSuggestions([
-        { startTime: '10:00', endTime: '11:00', roomId: room.id.toString(), roomName: room.name },
-        { startTime: '11:00', endTime: '12:00', roomId: room.id.toString(), roomName: room.name },
-        { startTime: '14:00', endTime: '15:00', roomId: room.id.toString(), roomName: room.name }
+        { startTime: '10:00', endTime: '11:00', roomId: room.id.toString(), roomName: room.name, type: 'time' },
+        { startTime: '11:00', endTime: '12:00', roomId: room.id.toString(), roomName: room.name, type: 'time' },
+        { startTime: '14:00', endTime: '15:00', roomId: room.id.toString(), roomName: room.name, type: 'time' }
       ]);
       
       setRoomSuggestions([
-        { startTime: selectedStartTime, endTime: selectedEndTime, roomId: '2', roomName: 'Conference Room Alpha' },
-        { startTime: selectedStartTime, endTime: selectedEndTime, roomId: '3', roomName: 'Small Meeting Room' }
+        { startTime: selectedStartTime, endTime: selectedEndTime, roomId: '2', roomName: 'Conference Room Alpha', type: 'room' },
+        { startTime: selectedStartTime, endTime: selectedEndTime, roomId: '3', roomName: 'Small Meeting Room', type: 'room' }
       ]);
       
       // Set whether this booking can override based on priority
@@ -178,7 +178,7 @@ export function BookingModal({
     }
   };
 
-  const handleRecurrencePatternChange = (pattern: RecurrencePattern) => {
+  const handleRecurrencePatternChange = (pattern: RecurrencePatternType) => {
     setRecurrencePattern(pattern);
   };
 

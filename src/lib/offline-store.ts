@@ -3,6 +3,16 @@ import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
 import { supabaseClient } from '@/lib/supabase-client';
 
+// Define a custom interface for the pending operations store
+interface PendingOperation {
+  id?: number;
+  timestamp: number;
+  operation: 'insert' | 'update' | 'delete';
+  table: string;
+  data: any;
+  processed: boolean;
+}
+
 // Define the schema structure for the database
 interface MeetingMasterDB extends DBSchema {
   rooms: {
@@ -17,14 +27,7 @@ interface MeetingMasterDB extends DBSchema {
   };
   pendingOperations: {
     key: number;
-    value: {
-      id?: number;
-      timestamp: number;
-      operation: 'insert' | 'update' | 'delete';
-      table: string;
-      data: any;
-      processed: boolean;
-    };
+    value: PendingOperation;
     indexes: { 'by-processed': boolean };
   };
 }
@@ -111,7 +114,7 @@ export const offlineStore = {
   async addPendingOperation(operation: 'insert' | 'update' | 'delete', table: string, data: any): Promise<number> {
     const db = await initDB();
     const tx = db.transaction('pendingOperations', 'readwrite');
-    const pendingOperation = {
+    const pendingOperation: PendingOperation = {
       timestamp: Date.now(),
       operation,
       table,
@@ -123,14 +126,7 @@ export const offlineStore = {
     return id;
   },
   
-  async getPendingOperations(): Promise<{ 
-    id?: number;
-    timestamp: number;
-    operation: 'insert' | 'update' | 'delete';
-    table: string;
-    data: any;
-    processed: boolean;
-  }[]> {
+  async getPendingOperations(): Promise<PendingOperation[]> {
     const db = await initDB();
     const index = db.transaction('pendingOperations').store.index('by-processed');
     return index.getAll(false);

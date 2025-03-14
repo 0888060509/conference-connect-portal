@@ -1,5 +1,5 @@
 
-import { FilePdf, FileSpreadsheet, FileText } from "lucide-react";
+import { File, FileText, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,11 +23,11 @@ export function ReportFormats({ onExport }: ReportFormatsProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem onClick={() => onExport('pdf')}>
-          <FilePdf className="mr-2 h-4 w-4" />
+          <File className="mr-2 h-4 w-4" />
           <span>PDF</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onExport('excel')}>
-          <FileSpreadsheet className="mr-2 h-4 w-4" />
+          <Table className="mr-2 h-4 w-4" />
           <span>Excel</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onExport('csv')}>

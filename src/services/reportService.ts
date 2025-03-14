@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Report, 
@@ -8,8 +7,16 @@ import {
   ReportShare,
   ReportExportFormat,
   ReportData,
-  AnomalyDetection
+  AnomalyDetection,
+  ReportConfig
 } from "@/types/reports";
+import { Json } from "@/integrations/supabase/types";
+
+// Type helper for database to app conversion
+const mapDbToReportTemplate = (data: any): ReportTemplate => ({
+  ...data,
+  config: data.config as ReportConfig
+});
 
 // Templates
 export async function getReportTemplates() {
@@ -18,7 +25,7 @@ export async function getReportTemplates() {
     .select('*');
     
   if (error) throw error;
-  return data as ReportTemplate[];
+  return (data || []).map(mapDbToReportTemplate) as ReportTemplate[];
 }
 
 export async function getReportTemplateById(id: string) {
@@ -29,30 +36,36 @@ export async function getReportTemplateById(id: string) {
     .maybeSingle();
     
   if (error) throw error;
-  return data as ReportTemplate;
+  return data ? mapDbToReportTemplate(data) : null;
 }
 
 export async function createReportTemplate(template: Omit<ReportTemplate, 'id' | 'created_at' | 'updated_at'>) {
   const { data, error } = await supabase
     .from('report_templates')
-    .insert(template)
+    .insert({
+      ...template,
+      config: template.config as unknown as Json
+    })
     .select()
     .single();
     
   if (error) throw error;
-  return data as ReportTemplate;
+  return mapDbToReportTemplate(data);
 }
 
 export async function updateReportTemplate(id: string, template: Partial<ReportTemplate>) {
   const { data, error } = await supabase
     .from('report_templates')
-    .update(template)
+    .update({
+      ...template,
+      config: template.config as unknown as Json
+    })
     .eq('id', id)
     .select()
     .single();
     
   if (error) throw error;
-  return data as ReportTemplate;
+  return mapDbToReportTemplate(data);
 }
 
 export async function deleteReportTemplate(id: string) {
@@ -89,7 +102,10 @@ export async function getReportById(id: string) {
 export async function createReport(report: Omit<Report, 'id' | 'created_at' | 'updated_at'>) {
   const { data, error } = await supabase
     .from('reports')
-    .insert(report)
+    .insert({
+      ...report,
+      parameters: report.parameters as unknown as Json
+    })
     .select()
     .single();
     
@@ -100,7 +116,10 @@ export async function createReport(report: Omit<Report, 'id' | 'created_at' | 'u
 export async function updateReport(id: string, report: Partial<Report>) {
   const { data, error } = await supabase
     .from('reports')
-    .update(report)
+    .update({
+      ...report,
+      parameters: report.parameters as unknown as Json
+    })
     .eq('id', id)
     .select()
     .single();

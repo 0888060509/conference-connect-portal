@@ -170,11 +170,11 @@ export function FilterBuilder({ dimensions, metrics, onFiltersChange }: FilterBu
                     if (filter.operator === 'between') {
                       // Parse comma-separated values for 'between' operator
                       const parts = e.target.value.split(',').map(p => parseFloat(p.trim())).filter(n => !isNaN(n));
-                      value = parts.length === 2 ? parts : [0, 0];
+                      value = parts.length === 2 ? ([parts[0].toString(), parts[1].toString()] as string[]) : ['0', '0'];
                     } else {
                       // For single numeric values
                       const num = parseFloat(e.target.value);
-                      value = !isNaN(num) ? num : 0;
+                      value = !isNaN(num) ? num.toString() : '0';
                     }
                   } else if (filter.operator === 'in') {
                     // Parse comma-separated values for 'in' operator

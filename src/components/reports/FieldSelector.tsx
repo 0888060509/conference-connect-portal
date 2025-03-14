@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/card";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -129,7 +128,9 @@ export function FieldSelector({ fieldType, selectedFields, onFieldsChange }: Fie
                   >
                     <span>{field.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {fieldType === "metrics" ? field.unit : field.type}
+                      {fieldType === "metrics" 
+                        ? (field as {id: string, name: string, unit: string}).unit 
+                        : (field as {id: string, name: string, type: string}).type}
                     </span>
                   </label>
                 </div>

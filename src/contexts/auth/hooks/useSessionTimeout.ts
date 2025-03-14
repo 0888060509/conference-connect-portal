@@ -20,7 +20,7 @@ export const useSessionTimeout = (user: any, logoutFn: () => void) => {
   }, [sessionTimeout, logoutFn]);
 
   // Set up activity listeners to reset session timeout
-  /*
+  
   useEffect(() => {
     if (user) {
       // Reset timeout on user activity
@@ -38,6 +38,6 @@ export const useSessionTimeout = (user: any, logoutFn: () => void) => {
       };
     }
   }, [user, resetSessionTimeout]);
-*/
+
   return { sessionTimeout, setSessionTimeoutState, resetSessionTimeout };
 };

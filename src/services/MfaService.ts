@@ -10,6 +10,12 @@ export interface MfaMethod {
   created_at: string;
 }
 
+export interface MfaSettings {
+  is_enabled: boolean;
+  methods: MfaMethod[];
+  recovery_codes: string[];
+}
+
 interface TotpSetupResponse {
   qr_code: string;
   secret: string;
@@ -17,6 +23,31 @@ interface TotpSetupResponse {
 }
 
 class MfaService {
+  async getUserMfaSettings(userId: string): Promise<MfaSettings | null> {
+    try {
+      const { data, error } = await supabase
+        .from('mfa_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (!data) return null;
+      
+      // Convert the JSON data to the correct types
+      return {
+        is_enabled: data.is_enabled || false,
+        methods: (data.methods || []) as MfaMethod[],
+        recovery_codes: (data.recovery_codes || []) as string[]
+      };
+    } catch (error) {
+      console.error('Error fetching MFA settings:', error);
+      toast.error('Failed to load MFA settings');
+      return null;
+    }
+  }
+
   async setupTotp(userId: string): Promise<TotpSetupResponse | null> {
     try {
       // In a real implementation, we would call Supabase Auth API to set up TOTP
@@ -45,7 +76,7 @@ class MfaService {
       
       if (mfaData) {
         // Update existing settings
-        const methods = [...mfaData.methods, newMethod];
+        const methods = [...(mfaData.methods as MfaMethod[] || []), newMethod];
         await supabase
           .from('mfa_settings')
           .update({ methods })
@@ -93,7 +124,7 @@ class MfaService {
       if (error) throw error;
       
       // Find the method and mark it as verified
-      const methods = mfaData.methods.map((method: MfaMethod) => {
+      const methods = (mfaData.methods as MfaMethod[] || []).map((method: MfaMethod) => {
         if (method.id === methodId) {
           return { ...method, verified: true };
         }
@@ -127,7 +158,7 @@ class MfaService {
       if (error) throw error;
       
       // Check if there's at least one verified method
-      const hasVerifiedMethod = mfaData.methods.some((method: MfaMethod) => method.verified);
+      const hasVerifiedMethod = (mfaData.methods as MfaMethod[] || []).some((method: MfaMethod) => method.verified);
       
       if (!hasVerifiedMethod) {
         toast.error('You need at least one verified method to enable MFA');
@@ -135,7 +166,7 @@ class MfaService {
       }
       
       // Generate recovery codes if none exist
-      let recoveryCodes = mfaData.recovery_codes;
+      let recoveryCodes = mfaData.recovery_codes as string[] || [];
       if (!recoveryCodes || recoveryCodes.length === 0) {
         recoveryCodes = Array.from({ length: 8 }, () => 
           Math.random().toString(36).substring(2, 7) + 
@@ -190,7 +221,7 @@ class MfaService {
       
       if (error) throw error;
       
-      return mfaData.recovery_codes || [];
+      return (mfaData.recovery_codes as string[]) || [];
     } catch (error) {
       console.error('Error getting recovery codes:', error);
       toast.error('Failed to get recovery codes');

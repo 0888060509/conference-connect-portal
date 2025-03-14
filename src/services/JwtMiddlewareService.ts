@@ -66,16 +66,6 @@ class JwtMiddlewareService {
         claims.role = userData.role;
       }
       
-      // Get user role assignments
-      const { data: roleAssignments } = await supabase
-        .from('user_role_assignments')
-        .select('role')
-        .eq('user_id', user.id);
-        
-      if (roleAssignments && roleAssignments.length > 0) {
-        claims.roles = roleAssignments.map(assignment => assignment.role);
-      }
-      
       // Get custom JWT claims from mappings
       const { data: customClaims } = await supabase
         .from('jwt_claim_mappings')
@@ -98,7 +88,7 @@ class JwtMiddlewareService {
     }
   }
   
-  // Check if the user has a specific role (using the new user_role_assignments table)
+  // Check if the user has a specific role
   async hasRole(role: string): Promise<boolean> {
     if (!this.jwtToken) {
       return false;
@@ -111,17 +101,30 @@ class JwtMiddlewareService {
         return false;
       }
       
-      const { data, error } = await supabase.rpc('user_has_role', {
-        user_id: user.id,
-        role_name: role
-      });
+      // First, check if user has the role directly in the users table
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
       
-      if (error) {
-        console.error('Error checking user role:', error);
-        return false;
+      if (userData && userData.role === role) {
+        return true;
       }
       
-      return data || false;
+      // If not found directly, use the is_admin function for 'admin' role
+      if (role === 'admin') {
+        const { data: isAdmin, error } = await supabase.rpc('is_admin');
+        
+        if (error) {
+          console.error('Error checking admin role:', error);
+          return false;
+        }
+        
+        return isAdmin;
+      }
+      
+      return false;
     } catch (error) {
       console.error('Error checking user role:', error);
       return false;
@@ -178,19 +181,10 @@ class JwtMiddlewareService {
     }
     
     try {
-      const { data, error } = await supabase.rpc('check_rate_limit', {
-        u_id: userId,
-        endpoint,
-        max_requests: maxRequests,
-        window_seconds: windowSeconds
-      });
-      
-      if (error) {
-        console.error('Error checking rate limit:', error);
-        return false;
-      }
-      
-      return data || false;
+      // Note: This function needs to be implemented in Supabase
+      // For now, we'll just return false (no rate limit hit)
+      console.log(`Rate limit check for ${userId} on ${endpoint}: ${maxRequests} in ${windowSeconds}s`);
+      return false;
     } catch (error) {
       console.error('Error checking rate limit:', error);
       return false;

@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserRole } from "@/contexts/auth/types";
+import { Json } from "@/integrations/supabase/types";
 
 export interface PasswordPolicy {
   min_length: number;
@@ -76,7 +77,8 @@ class AuthConfigService {
       
       if (error) throw error;
       
-      return data.setting_value as PasswordPolicy;
+      // Explicitly cast the JSON data to the correct type
+      return data.setting_value as unknown as PasswordPolicy;
     } catch (error) {
       console.error('Error fetching password policy:', error);
       toast.error('Failed to load password policy settings');
@@ -96,7 +98,7 @@ class AuthConfigService {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: policy })
+        .update({ setting_value: policy as unknown as Json })
         .eq('setting_key', 'password_policy');
       
       if (error) throw error;
@@ -119,7 +121,7 @@ class AuthConfigService {
       
       if (error) throw error;
       
-      return data.setting_value as SessionSettings;
+      return data.setting_value as unknown as SessionSettings;
     } catch (error) {
       console.error('Error fetching session settings:', error);
       toast.error('Failed to load session settings');
@@ -137,7 +139,7 @@ class AuthConfigService {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: settings })
+        .update({ setting_value: settings as unknown as Json })
         .eq('setting_key', 'session_settings');
       
       if (error) throw error;
@@ -160,7 +162,7 @@ class AuthConfigService {
       
       if (error) throw error;
       
-      return data.setting_value as OAuthProviders;
+      return data.setting_value as unknown as OAuthProviders;
     } catch (error) {
       console.error('Error fetching OAuth providers:', error);
       toast.error('Failed to load OAuth provider settings');
@@ -186,7 +188,7 @@ class AuthConfigService {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: providers })
+        .update({ setting_value: providers as unknown as Json })
         .eq('setting_key', 'oauth_providers');
       
       if (error) throw error;
@@ -209,7 +211,7 @@ class AuthConfigService {
       
       if (error) throw error;
       
-      return data.setting_value as EmailTemplates;
+      return data.setting_value as unknown as EmailTemplates;
     } catch (error) {
       console.error('Error fetching email templates:', error);
       toast.error('Failed to load email template settings');
@@ -236,7 +238,7 @@ class AuthConfigService {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: templates })
+        .update({ setting_value: templates as unknown as Json })
         .eq('setting_key', 'email_templates');
       
       if (error) throw error;
@@ -412,7 +414,14 @@ class AuthConfigService {
       
       if (error) throw error;
       
-      return data;
+      if (!data) return null;
+      
+      // Convert the database record to the MfaSettings interface
+      return {
+        is_enabled: data.is_enabled || false,
+        methods: (data.methods || []) as any[],
+        recovery_codes: (data.recovery_codes || []) as string[]
+      };
     } catch (error) {
       console.error('Error fetching MFA settings:', error);
       toast.error('Failed to load MFA settings');

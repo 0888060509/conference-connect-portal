@@ -1,5 +1,5 @@
 import { User, UserImpl } from "../types";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 
 // Define the session timeout duration (30 minutes)
 export const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000;

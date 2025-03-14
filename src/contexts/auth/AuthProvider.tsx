@@ -6,7 +6,7 @@ import {
   logoutUser, 
   resetUserPassword, 
   signInWithGoogleAuth 
-} from "./actions/authActions";
+} from "./actions";
 import { 
   initializeAuthState,
   setupAuthStateChangeListener

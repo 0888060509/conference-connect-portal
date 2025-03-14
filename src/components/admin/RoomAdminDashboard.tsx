@@ -6,6 +6,7 @@ import { RoomStatistics } from "@/components/admin/RoomStatistics";
 import { Button } from "@/components/ui/button";
 import { Download, Plus } from "lucide-react";
 import { RoomFormDialog } from "@/components/admin/RoomFormDialog";
+import { BundleManagement } from "@/components/admin/amenities/BundleManagement";
 
 export function RoomAdminDashboard() {
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
@@ -100,6 +101,7 @@ export function RoomAdminDashboard() {
         <TabsList>
           <TabsTrigger value="list">Room List</TabsTrigger>
           <TabsTrigger value="statistics">Statistics</TabsTrigger>
+          <TabsTrigger value="amenities">Amenities</TabsTrigger>
         </TabsList>
         
         <TabsContent value="list" className="mt-6">
@@ -108,6 +110,10 @@ export function RoomAdminDashboard() {
         
         <TabsContent value="statistics" className="mt-6">
           <RoomStatistics />
+        </TabsContent>
+        
+        <TabsContent value="amenities" className="mt-6">
+          <BundleManagement />
         </TabsContent>
       </Tabs>
 

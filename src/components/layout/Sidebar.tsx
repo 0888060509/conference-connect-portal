@@ -4,7 +4,8 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { 
   Home, Calendar, BookOpen, Building2, UserCircle, Bell, Settings, 
-  ChevronLeft, ChevronRight, LayoutDashboard, User, HelpCircle, BarChart
+  ChevronLeft, ChevronRight, LayoutDashboard, User, HelpCircle, BarChart,
+  List, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -171,6 +172,20 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
                     label="Settings"
                     path="/admin/settings"
                     active={isActive("/admin/settings")}
+                    collapsed={collapsed}
+                  />
+                  <NavItem
+                    icon={List}
+                    label="Waitlist"
+                    path="/admin/waitlist"
+                    active={isActive("/admin/waitlist")}
+                    collapsed={collapsed}
+                  />
+                  <NavItem
+                    icon={AlertTriangle}
+                    label="Conflict Rules"
+                    path="/admin/conflict-rules"
+                    active={isActive("/admin/conflict-rules")}
                     collapsed={collapsed}
                   />
                 </>

@@ -1,185 +1,207 @@
 
 import { useState } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 export default function Login() {
+  const { login, resetPassword, error, clearError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [remember, setRemember] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
-  const { user, login, resetPassword, isLoading, error, clearError, isAuthenticated } = useAuth();
+  const [resetSent, setResetSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const location = useLocation();
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
-  }
+  // Get the redirect path from location state or default to dashboard
+  const from = location.state?.from?.pathname || "/dashboard";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setIsSubmitting(true);
     try {
-      await login(email, password, rememberMe);
-      navigate("/dashboard");
+      await login(email, password, remember);
+      navigate(from, { replace: true });
     } catch (err) {
-      // Error is handled by the context
+      console.error("Login error:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setIsSubmitting(true);
     try {
       await resetPassword(resetEmail);
-      toast({
-        title: "Password reset email sent",
-        description: "Please check your email for instructions to reset your password.",
-      });
-      setShowForgotPassword(false);
+      setResetSent(true);
     } catch (err) {
-      // Error is handled by the context
+      console.error("Password reset error:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-secondary mr-2" />
-            <div className="font-bold text-2xl">MeetingMaster</div>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex justify-center">
+          <div className="text-primary text-4xl font-bold">RoomBooker</div>
         </div>
 
-        {showForgotPassword ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Reset Password</CardTitle>
-              <CardDescription>
-                Enter your email address below and we'll send you a link to reset your password.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleResetPassword} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email">Email</Label>
-                  <Input
-                    id="reset-email"
-                    type="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="you@company.com"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Processing..." : "Send Reset Link"}
-                </Button>
-              </form>
-            </CardContent>
-            <CardFooter className="flex justify-center">
-              <Button
-                variant="link"
-                onClick={() => {
-                  setShowForgotPassword(false);
-                  clearError();
-                }}
-              >
-                Back to Login
-              </Button>
-            </CardFooter>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Welcome Back</CardTitle>
-              <CardDescription>
-                Sign in to your MeetingMaster account to access the room booking system.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLogin} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@company.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <Label htmlFor="password">Password</Label>
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-sm"
-                      onClick={() => {
-                        setShowForgotPassword(true);
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="reset">Reset Password</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="login">
+            <Card>
+              <CardHeader>
+                <CardTitle>Welcome back</CardTitle>
+                <CardDescription>
+                  Enter your credentials to access your account
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your@email.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
                         clearError();
                       }}
-                    >
-                      Forgot password?
-                    </Button>
+                      required
+                    />
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <Label htmlFor="password">Password</Label>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        clearError();
+                      }}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember"
+                      checked={remember}
+                      onCheckedChange={(checked) => setRemember(checked === true)}
+                    />
+                    <label
+                      htmlFor="remember"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Remember me
+                    </label>
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? "Logging in..." : "Login"}
+                  </Button>
+                </form>
+
+                <div className="mt-6 border-t pt-4">
+                  <p className="text-sm text-gray-600 mb-2">Demo credentials:</p>
+                  <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                    <div>
+                      <p className="font-semibold">Admin user:</p>
+                      <p>admin@example.com</p>
+                      <p>password: password</p>
+                    </div>
+                    <div>
+                      <p className="font-semibold">Regular user:</p>
+                      <p>user@example.com</p>
+                      <p>password: password</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="remember-me"
-                    checked={rememberMe}
-                    onCheckedChange={(checked) => setRememberMe(!!checked)}
-                  />
-                  <Label htmlFor="remember-me" className="text-sm cursor-pointer">
-                    Remember me for 30 days
-                  </Label>
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Signing in..." : "Sign In"}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="reset">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reset Password</CardTitle>
+                <CardDescription>
+                  Enter your email to receive a password reset link
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {resetSent ? (
+                  <Alert>
+                    <AlertDescription>
+                      If an account exists with this email, you will receive a password reset link.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email</Label>
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="your@email.com"
+                        value={resetEmail}
+                        onChange={(e) => {
+                          setResetEmail(e.target.value);
+                          clearError();
+                        }}
+                        required
+                      />
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? "Sending..." : "Send Reset Link"}
+                    </Button>
+                  </form>
+                )}
+              </CardContent>
+              <CardFooter className="flex justify-center">
+                <Button variant="link" onClick={() => window.location.reload()}>
+                  Back to Login
                 </Button>
-              </form>
-            </CardContent>
-            <CardFooter>
-              <div className="text-sm text-center w-full text-muted-foreground">
-                <p>Demo credentials:</p>
-                <p>Admin: admin@example.com / password</p>
-                <p>User: user@example.com / password</p>
-              </div>
-            </CardFooter>
-          </Card>
-        )}
-      </div>
-      <div className="mt-8 text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} MeetingMaster. All rights reserved.
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -13,13 +13,6 @@ export interface PendingOperation {
   processed: boolean;
 }
 
-// Define a fallback type for DB schema values if not provided by idb
-interface DBSchemaValue {
-  key: string | number;
-  value: any;
-  indexes?: { [key: string]: string | number | boolean | Date };
-}
-
 // Define the schema structure for the database
 export interface MeetingMasterDB extends DBSchema {
   rooms: {
@@ -35,10 +28,8 @@ export interface MeetingMasterDB extends DBSchema {
   pendingOperations: {
     key: number;
     value: PendingOperation;
-    indexes: { 'by-processed': boolean };
+    indexes: { 'by-processed': number }; // Changed from boolean to number
   };
-  // Add string index signature for compatibility
-  [key: string]: DBSchemaValue;
 }
 
 let dbPromise: Promise<IDBPDatabase<MeetingMasterDB>> | null = null;
@@ -67,6 +58,7 @@ export const initDB = async () => {
             keyPath: 'id', 
             autoIncrement: true 
           });
+          // Convert boolean to number (0 for false, 1 for true)
           pendingStore.createIndex('by-processed', 'processed');
         }
       }

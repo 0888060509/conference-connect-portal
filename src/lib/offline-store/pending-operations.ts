@@ -12,7 +12,7 @@ export const pendingOperations = {
       data,
       processed: false
     };
-    const id = await tx.store.add(pendingOperation);
+    const id = await tx.store.add(pendingOperation) as number;
     await tx.done;
     return id;
   },
@@ -20,7 +20,8 @@ export const pendingOperations = {
   async getPendingOperations(): Promise<PendingOperation[]> {
     const db = await initDB();
     const index = db.transaction('pendingOperations').store.index('by-processed');
-    return index.getAll(false);
+    // Use 0 to represent false in IndexedDB
+    return index.getAll(0);
   },
   
   async markOperationProcessed(id: number): Promise<void> {
@@ -38,7 +39,8 @@ export const pendingOperations = {
     const db = await initDB();
     const tx = db.transaction('pendingOperations', 'readwrite');
     const index = tx.store.index('by-processed');
-    let cursor = await index.openCursor(true);
+    // Use 1 to represent true in IndexedDB
+    let cursor = await index.openCursor(1);
     
     while (cursor) {
       await cursor.delete();

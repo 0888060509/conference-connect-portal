@@ -121,7 +121,7 @@ class JwtMiddlewareService {
           return false;
         }
         
-        return isAdmin;
+        return !!isAdmin;
       }
       
       return false;

@@ -1,7 +1,5 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { UserRole } from "@/contexts/auth/types";
 import { Json } from "@/integrations/supabase/types";
 
 export interface PasswordPolicy {
@@ -21,8 +19,8 @@ export interface SessionSettings {
 export interface OAuthProvider {
   enabled: boolean;
   client_id: string;
-  client_secret: string;
-  tenant_id?: string; // For Microsoft
+  secret: string;
+  redirect_uri: string;
 }
 
 export interface OAuthProviders {
@@ -32,8 +30,7 @@ export interface OAuthProviders {
 
 export interface EmailTemplate {
   subject: string;
-  custom_template: boolean;
-  html_content?: string;
+  content_html: string;
 }
 
 export interface EmailTemplates {
@@ -42,468 +39,492 @@ export interface EmailTemplates {
   magic_link: EmailTemplate;
 }
 
-export interface DirectoryIntegration {
-  id: string;
-  provider: string;
-  config: any;
-  enabled: boolean;
-  last_sync: string | null;
-  sync_interval: number;
-}
+// Helper functions to safely cast between types
+const jsonToPasswordPolicy = (json: Json | null): PasswordPolicy => {
+  if (!json || typeof json !== 'object') {
+    // Default policy if none exists
+    return {
+      min_length: 8,
+      require_uppercase: true,
+      require_lowercase: true,
+      require_number: true,
+      require_special: false
+    };
+  }
+  
+  const obj = json as Record<string, any>;
+  
+  return {
+    min_length: Number(obj.min_length) || 8,
+    require_uppercase: Boolean(obj.require_uppercase),
+    require_lowercase: Boolean(obj.require_lowercase),
+    require_number: Boolean(obj.require_number),
+    require_special: Boolean(obj.require_special)
+  };
+};
 
-export interface JwtClaimMapping {
-  id: string;
-  directory_attribute: string;
-  jwt_claim: string;
-  transform_function: string | null;
-  is_active: boolean;
-}
+const jsonToSessionSettings = (json: Json | null): SessionSettings => {
+  if (!json || typeof json !== 'object') {
+    // Default settings if none exists
+    return {
+      session_duration_seconds: 3600,
+      refresh_token_rotation: true,
+      refresh_token_expiry_days: 30
+    };
+  }
+  
+  const obj = json as Record<string, any>;
+  
+  return {
+    session_duration_seconds: Number(obj.session_duration_seconds) || 3600,
+    refresh_token_rotation: Boolean(obj.refresh_token_rotation),
+    refresh_token_expiry_days: Number(obj.refresh_token_expiry_days) || 30
+  };
+};
 
-export interface MfaSettings {
-  is_enabled: boolean;
-  methods: any[];
-  recovery_codes: string[];
-}
+const jsonToOAuthProviders = (json: Json | null): OAuthProviders => {
+  if (!json || typeof json !== 'object') {
+    // Default providers if none exists
+    return {
+      google: {
+        enabled: false,
+        client_id: '',
+        secret: '',
+        redirect_uri: ''
+      },
+      microsoft: {
+        enabled: false,
+        client_id: '',
+        secret: '',
+        redirect_uri: ''
+      }
+    };
+  }
+  
+  const obj = json as Record<string, any>;
+  const defaultProvider = {
+    enabled: false,
+    client_id: '',
+    secret: '',
+    redirect_uri: ''
+  };
+  
+  return {
+    google: {
+      enabled: Boolean(obj.google?.enabled),
+      client_id: String(obj.google?.client_id || ''),
+      secret: String(obj.google?.secret || ''),
+      redirect_uri: String(obj.google?.redirect_uri || '')
+    },
+    microsoft: {
+      enabled: Boolean(obj.microsoft?.enabled),
+      client_id: String(obj.microsoft?.client_id || ''),
+      secret: String(obj.microsoft?.secret || ''),
+      redirect_uri: String(obj.microsoft?.redirect_uri || '')
+    }
+  };
+};
+
+const jsonToEmailTemplates = (json: Json | null): EmailTemplates => {
+  if (!json || typeof json !== 'object') {
+    // Default templates if none exists
+    return {
+      verification: {
+        subject: 'Verify your email',
+        content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>'
+      },
+      password_reset: {
+        subject: 'Reset your password',
+        content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>'
+      },
+      magic_link: {
+        subject: 'Your magic link',
+        content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>'
+      }
+    };
+  }
+  
+  const obj = json as Record<string, any>;
+  const defaultTemplate = {
+    subject: '',
+    content_html: ''
+  };
+  
+  return {
+    verification: {
+      subject: String(obj.verification?.subject || 'Verify your email'),
+      content_html: String(obj.verification?.content_html || '<p>Please verify your email</p>')
+    },
+    password_reset: {
+      subject: String(obj.password_reset?.subject || 'Reset your password'),
+      content_html: String(obj.password_reset?.content_html || '<p>Reset your password</p>')
+    },
+    magic_link: {
+      subject: String(obj.magic_link?.subject || 'Your magic link'),
+      content_html: String(obj.magic_link?.content_html || '<p>Click to sign in</p>')
+    }
+  };
+};
 
 class AuthConfigService {
-  // Password policy management
+  // Get password policy from auth settings
   async getPasswordPolicy(): Promise<PasswordPolicy> {
     try {
       const { data, error } = await supabase
         .from('auth_settings')
         .select('setting_value')
         .eq('setting_key', 'password_policy')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
-      // Explicitly cast the JSON data to the correct type
-      return data.setting_value as unknown as PasswordPolicy;
+      if (!data) {
+        // Default policy if none exists
+        return {
+          min_length: 8,
+          require_uppercase: true,
+          require_lowercase: true,
+          require_number: true,
+          require_special: false
+        };
+      }
+      
+      return jsonToPasswordPolicy(data.setting_value);
     } catch (error) {
       console.error('Error fetching password policy:', error);
-      toast.error('Failed to load password policy settings');
-      
-      // Return default policy if fetch fails
+      // Return default policy
       return {
-        min_length: 10,
+        min_length: 8,
         require_uppercase: true,
         require_lowercase: true,
         require_number: true,
-        require_special: true
+        require_special: false
       };
     }
   }
   
-  async updatePasswordPolicy(policy: PasswordPolicy): Promise<void> {
+  // Update password policy
+  async updatePasswordPolicy(policy: PasswordPolicy): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: policy as unknown as Json })
-        .eq('setting_key', 'password_policy');
+        .upsert({
+          setting_key: 'password_policy',
+          setting_value: policy as unknown as Json,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
       
       if (error) throw error;
-      toast.success('Password policy updated successfully');
+      
+      return true;
     } catch (error) {
       console.error('Error updating password policy:', error);
-      toast.error('Failed to update password policy');
-      throw error;
+      return false;
     }
   }
   
-  // Session settings management
+  // Get session settings from auth settings
   async getSessionSettings(): Promise<SessionSettings> {
     try {
       const { data, error } = await supabase
         .from('auth_settings')
         .select('setting_value')
         .eq('setting_key', 'session_settings')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
-      return data.setting_value as unknown as SessionSettings;
+      if (!data) {
+        // Default settings if none exists
+        return {
+          session_duration_seconds: 3600,
+          refresh_token_rotation: true,
+          refresh_token_expiry_days: 30
+        };
+      }
+      
+      return jsonToSessionSettings(data.setting_value);
     } catch (error) {
       console.error('Error fetching session settings:', error);
-      toast.error('Failed to load session settings');
-      
-      // Return default settings if fetch fails
+      // Return default settings
       return {
         session_duration_seconds: 3600,
         refresh_token_rotation: true,
-        refresh_token_expiry_days: 7
+        refresh_token_expiry_days: 30
       };
     }
   }
   
-  async updateSessionSettings(settings: SessionSettings): Promise<void> {
+  // Update session settings
+  async updateSessionSettings(settings: SessionSettings): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: settings as unknown as Json })
-        .eq('setting_key', 'session_settings');
+        .upsert({
+          setting_key: 'session_settings',
+          setting_value: settings as unknown as Json,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
       
       if (error) throw error;
-      toast.success('Session settings updated successfully');
+      
+      return true;
     } catch (error) {
       console.error('Error updating session settings:', error);
-      toast.error('Failed to update session settings');
-      throw error;
+      return false;
     }
   }
   
-  // OAuth providers management
+  // Get OAuth providers config from auth settings
   async getOAuthProviders(): Promise<OAuthProviders> {
     try {
       const { data, error } = await supabase
         .from('auth_settings')
         .select('setting_value')
         .eq('setting_key', 'oauth_providers')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
-      return data.setting_value as unknown as OAuthProviders;
+      if (!data) {
+        // Default providers if none exists
+        return {
+          google: {
+            enabled: false,
+            client_id: '',
+            secret: '',
+            redirect_uri: ''
+          },
+          microsoft: {
+            enabled: false,
+            client_id: '',
+            secret: '',
+            redirect_uri: ''
+          }
+        };
+      }
+      
+      return jsonToOAuthProviders(data.setting_value);
     } catch (error) {
       console.error('Error fetching OAuth providers:', error);
-      toast.error('Failed to load OAuth provider settings');
-      
-      // Return default empty providers if fetch fails
+      // Return default providers
       return {
         google: {
           enabled: false,
           client_id: '',
-          client_secret: ''
+          secret: '',
+          redirect_uri: ''
         },
         microsoft: {
           enabled: false,
           client_id: '',
-          client_secret: '',
-          tenant_id: ''
+          secret: '',
+          redirect_uri: ''
         }
       };
     }
   }
   
-  async updateOAuthProviders(providers: OAuthProviders): Promise<void> {
+  // Update OAuth providers config
+  async updateOAuthProviders(providers: OAuthProviders): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: providers as unknown as Json })
-        .eq('setting_key', 'oauth_providers');
+        .upsert({
+          setting_key: 'oauth_providers',
+          setting_value: providers as unknown as Json,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
       
       if (error) throw error;
-      toast.success('OAuth providers updated successfully');
+      
+      return true;
     } catch (error) {
       console.error('Error updating OAuth providers:', error);
-      toast.error('Failed to update OAuth providers');
-      throw error;
+      return false;
     }
   }
   
-  // Email templates management
+  // Get email templates from auth settings
   async getEmailTemplates(): Promise<EmailTemplates> {
     try {
       const { data, error } = await supabase
         .from('auth_settings')
         .select('setting_value')
         .eq('setting_key', 'email_templates')
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       
-      return data.setting_value as unknown as EmailTemplates;
+      if (!data) {
+        // Default templates if none exists
+        return {
+          verification: {
+            subject: 'Verify your email',
+            content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>'
+          },
+          password_reset: {
+            subject: 'Reset your password',
+            content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>'
+          },
+          magic_link: {
+            subject: 'Your magic link',
+            content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>'
+          }
+        };
+      }
+      
+      return jsonToEmailTemplates(data.setting_value);
     } catch (error) {
       console.error('Error fetching email templates:', error);
-      toast.error('Failed to load email template settings');
-      
-      // Return default templates if fetch fails
+      // Return default templates
       return {
         verification: {
           subject: 'Verify your email',
-          custom_template: false
+          content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>'
         },
         password_reset: {
           subject: 'Reset your password',
-          custom_template: false
+          content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>'
         },
         magic_link: {
           subject: 'Your magic link',
-          custom_template: false
+          content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>'
         }
       };
     }
   }
   
-  async updateEmailTemplates(templates: EmailTemplates): Promise<void> {
+  // Update email templates
+  async updateEmailTemplates(templates: EmailTemplates): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('auth_settings')
-        .update({ setting_value: templates as unknown as Json })
-        .eq('setting_key', 'email_templates');
+        .upsert({
+          setting_key: 'email_templates',
+          setting_value: templates as unknown as Json,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
       
       if (error) throw error;
-      toast.success('Email templates updated successfully');
+      
+      return true;
     } catch (error) {
       console.error('Error updating email templates:', error);
-      toast.error('Failed to update email templates');
-      throw error;
+      return false;
     }
   }
   
-  // Directory integration management
-  async getDirectoryIntegrations(): Promise<DirectoryIntegration[]> {
+  // Check if email verification is required for signup
+  async isEmailVerificationRequired(): Promise<boolean> {
     try {
       const { data, error } = await supabase
-        .from('directory_integrations')
-        .select('*');
-      
-      if (error) throw error;
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching directory integrations:', error);
-      toast.error('Failed to load directory integrations');
-      return [];
-    }
-  }
-  
-  async updateDirectoryIntegration(integration: DirectoryIntegration): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('directory_integrations')
-        .update({
-          provider: integration.provider,
-          config: integration.config,
-          enabled: integration.enabled,
-          sync_interval: integration.sync_interval,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', integration.id);
-      
-      if (error) throw error;
-      toast.success('Directory integration updated successfully');
-    } catch (error) {
-      console.error('Error updating directory integration:', error);
-      toast.error('Failed to update directory integration');
-      throw error;
-    }
-  }
-  
-  async createDirectoryIntegration(integration: Omit<DirectoryIntegration, 'id' | 'last_sync'>): Promise<string> {
-    try {
-      const { data, error } = await supabase
-        .from('directory_integrations')
-        .insert({
-          provider: integration.provider,
-          config: integration.config,
-          enabled: integration.enabled,
-          sync_interval: integration.sync_interval
-        })
-        .select();
-      
-      if (error) throw error;
-      toast.success('Directory integration created successfully');
-      return data[0].id;
-    } catch (error) {
-      console.error('Error creating directory integration:', error);
-      toast.error('Failed to create directory integration');
-      throw error;
-    }
-  }
-  
-  async deleteDirectoryIntegration(id: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('directory_integrations')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      toast.success('Directory integration deleted successfully');
-    } catch (error) {
-      console.error('Error deleting directory integration:', error);
-      toast.error('Failed to delete directory integration');
-      throw error;
-    }
-  }
-  
-  // JWT claim mappings management
-  async getJwtClaimMappings(): Promise<JwtClaimMapping[]> {
-    try {
-      const { data, error } = await supabase
-        .from('jwt_claim_mappings')
-        .select('*');
-      
-      if (error) throw error;
-      
-      return data;
-    } catch (error) {
-      console.error('Error fetching JWT claim mappings:', error);
-      toast.error('Failed to load JWT claim mappings');
-      return [];
-    }
-  }
-  
-  async updateJwtClaimMapping(mapping: JwtClaimMapping): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('jwt_claim_mappings')
-        .update({
-          directory_attribute: mapping.directory_attribute,
-          jwt_claim: mapping.jwt_claim,
-          transform_function: mapping.transform_function,
-          is_active: mapping.is_active
-        })
-        .eq('id', mapping.id);
-      
-      if (error) throw error;
-      toast.success('JWT claim mapping updated successfully');
-    } catch (error) {
-      console.error('Error updating JWT claim mapping:', error);
-      toast.error('Failed to update JWT claim mapping');
-      throw error;
-    }
-  }
-  
-  async createJwtClaimMapping(mapping: Omit<JwtClaimMapping, 'id'>): Promise<string> {
-    try {
-      const { data, error } = await supabase
-        .from('jwt_claim_mappings')
-        .insert({
-          directory_attribute: mapping.directory_attribute,
-          jwt_claim: mapping.jwt_claim,
-          transform_function: mapping.transform_function,
-          is_active: mapping.is_active
-        })
-        .select();
-      
-      if (error) throw error;
-      toast.success('JWT claim mapping created successfully');
-      return data[0].id;
-    } catch (error) {
-      console.error('Error creating JWT claim mapping:', error);
-      toast.error('Failed to create JWT claim mapping');
-      throw error;
-    }
-  }
-  
-  async deleteJwtClaimMapping(id: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('jwt_claim_mappings')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      toast.success('JWT claim mapping deleted successfully');
-    } catch (error) {
-      console.error('Error deleting JWT claim mapping:', error);
-      toast.error('Failed to delete JWT claim mapping');
-      throw error;
-    }
-  }
-  
-  // MFA management
-  async getUserMfaSettings(userId: string): Promise<MfaSettings | null> {
-    try {
-      const { data, error } = await supabase
-        .from('mfa_settings')
-        .select('*')
-        .eq('user_id', userId)
+        .from('auth_settings')
+        .select('setting_value')
+        .eq('setting_key', 'email_verification_required')
         .maybeSingle();
       
       if (error) throw error;
       
-      if (!data) return null;
+      if (!data) {
+        return true; // Default to true if setting doesn't exist
+      }
       
-      // Convert the database record to the MfaSettings interface
+      return Boolean(data.setting_value);
+    } catch (error) {
+      console.error('Error checking email verification requirement:', error);
+      return true; // Default to true on error
+    }
+  }
+  
+  // Set whether email verification is required for signup
+  async setEmailVerificationRequired(required: boolean): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('auth_settings')
+        .upsert({
+          setting_key: 'email_verification_required',
+          setting_value: required,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error setting email verification requirement:', error);
+      return false;
+    }
+  }
+  
+  // Get MFA settings for an organization
+  async getMfaSettings(): Promise<{ is_required: boolean, allowed_methods: string[] }> {
+    try {
+      const { data, error } = await supabase
+        .from('auth_settings')
+        .select('setting_value')
+        .eq('setting_key', 'mfa_settings')
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      if (!data) {
+        // Default MFA settings if none exists
+        return {
+          is_required: false,
+          allowed_methods: ['totp']
+        };
+      }
+      
+      const settingValue = data.setting_value as any;
+      
       return {
-        is_enabled: data.is_enabled || false,
-        methods: (data.methods || []) as any[],
-        recovery_codes: (data.recovery_codes || []) as string[]
+        is_required: Boolean(settingValue.is_required),
+        allowed_methods: Array.isArray(settingValue.allowed_methods) 
+          ? settingValue.allowed_methods 
+          : ['totp']
       };
     } catch (error) {
       console.error('Error fetching MFA settings:', error);
-      toast.error('Failed to load MFA settings');
-      return null;
+      // Return default settings
+      return {
+        is_required: false,
+        allowed_methods: ['totp']
+      };
     }
   }
   
-  async updateUserMfaSettings(userId: string, settings: Partial<MfaSettings>): Promise<void> {
+  // Update MFA settings for an organization
+  async updateMfaSettings(settings: { is_required: boolean, allowed_methods: string[] }): Promise<boolean> {
     try {
-      // Check if settings exist for user
-      const { data: existingSettings } = await supabase
-        .from('mfa_settings')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const { error } = await supabase
+        .from('auth_settings')
+        .upsert({
+          setting_key: 'mfa_settings',
+          setting_value: settings as unknown as Json,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'setting_key'
+        });
       
-      if (existingSettings) {
-        // Update existing settings
-        const { error } = await supabase
-          .from('mfa_settings')
-          .update({
-            is_enabled: settings.is_enabled !== undefined ? settings.is_enabled : existingSettings.is_enabled,
-            methods: settings.methods || existingSettings.methods,
-            recovery_codes: settings.recovery_codes || existingSettings.recovery_codes,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', userId);
-        
-        if (error) throw error;
-      } else {
-        // Create new settings
-        const { error } = await supabase
-          .from('mfa_settings')
-          .insert({
-            user_id: userId,
-            is_enabled: settings.is_enabled || false,
-            methods: settings.methods || [],
-            recovery_codes: settings.recovery_codes || []
-          });
-        
-        if (error) throw error;
-      }
+      if (error) throw error;
       
-      toast.success('MFA settings updated successfully');
+      return true;
     } catch (error) {
       console.error('Error updating MFA settings:', error);
-      toast.error('Failed to update MFA settings');
-      throw error;
+      return false;
     }
-  }
-  
-  // Password validation
-  validatePassword(password: string): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    
-    // These are client-side validations; the server has the ultimate validation
-    if (password.length < 10) {
-      errors.push('Password must be at least 10 characters long');
-    }
-    
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-    
-    if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-    
-    if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
-    
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      errors.push('Password must contain at least one special character');
-    }
-    
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
   }
 }
 
-// Export singleton instance
 export const authConfigService = new AuthConfigService();

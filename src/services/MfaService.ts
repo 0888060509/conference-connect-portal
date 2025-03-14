@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
 
 export interface MfaMethod {
   type: 'totp' | 'sms'; // Time-based one-time password or SMS
@@ -22,6 +23,49 @@ interface TotpSetupResponse {
   uri: string;
 }
 
+// Helper function to safely convert JSON to MfaMethod[]
+const jsonToMfaMethods = (json: Json | null): MfaMethod[] => {
+  if (!json) return [];
+  
+  try {
+    // Handle case when it's already an array
+    if (Array.isArray(json)) {
+      return json.map(item => ({
+        type: (item as any).type || 'totp',
+        id: (item as any).id || '',
+        name: (item as any).name || '',
+        verified: Boolean((item as any).verified),
+        created_at: (item as any).created_at || new Date().toISOString()
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error('Error converting JSON to MfaMethod[]:', error);
+    return [];
+  }
+};
+
+// Helper function to safely convert JSON to string[]
+const jsonToStringArray = (json: Json | null): string[] => {
+  if (!json) return [];
+  
+  try {
+    // Handle case when it's already an array
+    if (Array.isArray(json)) {
+      return json.map(item => String(item));
+    }
+    return [];
+  } catch (error) {
+    console.error('Error converting JSON to string[]:', error);
+    return [];
+  }
+};
+
+// Helper function to convert MfaMethod[] to JSON safely
+const mfaMethodsToJson = (methods: MfaMethod[]): Json => {
+  return methods as unknown as Json;
+};
+
 class MfaService {
   async getUserMfaSettings(userId: string): Promise<MfaSettings | null> {
     try {
@@ -38,8 +82,8 @@ class MfaService {
       // Convert the JSON data to the correct types
       return {
         is_enabled: data.is_enabled || false,
-        methods: (data.methods || []) as MfaMethod[],
-        recovery_codes: (data.recovery_codes || []) as string[]
+        methods: jsonToMfaMethods(data.methods),
+        recovery_codes: jsonToStringArray(data.recovery_codes)
       };
     } catch (error) {
       console.error('Error fetching MFA settings:', error);
@@ -76,10 +120,10 @@ class MfaService {
       
       if (mfaData) {
         // Update existing settings
-        const methods = [...(mfaData.methods as MfaMethod[] || []), newMethod];
+        const methods = [...jsonToMfaMethods(mfaData.methods), newMethod];
         await supabase
           .from('mfa_settings')
-          .update({ methods })
+          .update({ methods: mfaMethodsToJson(methods) })
           .eq('user_id', userId);
       } else {
         // Create new settings
@@ -88,8 +132,8 @@ class MfaService {
           .insert({
             user_id: userId,
             is_enabled: false,
-            methods: [newMethod],
-            recovery_codes: []
+            methods: mfaMethodsToJson([newMethod]),
+            recovery_codes: [] as unknown as Json
           });
       }
       
@@ -124,7 +168,7 @@ class MfaService {
       if (error) throw error;
       
       // Find the method and mark it as verified
-      const methods = (mfaData.methods as MfaMethod[] || []).map((method: MfaMethod) => {
+      const methods = jsonToMfaMethods(mfaData.methods).map((method: MfaMethod) => {
         if (method.id === methodId) {
           return { ...method, verified: true };
         }
@@ -134,7 +178,7 @@ class MfaService {
       // Update the MFA settings
       await supabase
         .from('mfa_settings')
-        .update({ methods })
+        .update({ methods: mfaMethodsToJson(methods) })
         .eq('user_id', userId);
       
       toast.success('Authenticator app verified successfully');
@@ -158,7 +202,8 @@ class MfaService {
       if (error) throw error;
       
       // Check if there's at least one verified method
-      const hasVerifiedMethod = (mfaData.methods as MfaMethod[] || []).some((method: MfaMethod) => method.verified);
+      const methods = jsonToMfaMethods(mfaData.methods);
+      const hasVerifiedMethod = methods.some((method: MfaMethod) => method.verified);
       
       if (!hasVerifiedMethod) {
         toast.error('You need at least one verified method to enable MFA');
@@ -166,7 +211,7 @@ class MfaService {
       }
       
       // Generate recovery codes if none exist
-      let recoveryCodes = mfaData.recovery_codes as string[] || [];
+      let recoveryCodes = jsonToStringArray(mfaData.recovery_codes);
       if (!recoveryCodes || recoveryCodes.length === 0) {
         recoveryCodes = Array.from({ length: 8 }, () => 
           Math.random().toString(36).substring(2, 7) + 
@@ -180,7 +225,7 @@ class MfaService {
         .from('mfa_settings')
         .update({ 
           is_enabled: true,
-          recovery_codes: recoveryCodes 
+          recovery_codes: recoveryCodes as unknown as Json
         })
         .eq('user_id', userId);
       
@@ -221,7 +266,7 @@ class MfaService {
       
       if (error) throw error;
       
-      return (mfaData.recovery_codes as string[]) || [];
+      return jsonToStringArray(mfaData.recovery_codes);
     } catch (error) {
       console.error('Error getting recovery codes:', error);
       toast.error('Failed to get recovery codes');
@@ -241,7 +286,7 @@ class MfaService {
       // Update the MFA settings
       await supabase
         .from('mfa_settings')
-        .update({ recovery_codes: recoveryCodes })
+        .update({ recovery_codes: recoveryCodes as unknown as Json })
         .eq('user_id', userId);
       
       toast.success('Recovery codes regenerated successfully');

@@ -56,8 +56,8 @@ export function useRealtime<T = any>(
             filter,
           }, 
           (payload) => {
-            // Use type assertion to handle the payload correctly
-            callback(payload as RealtimePostgresChangesPayload<T>);
+            // Double type assertion to safely convert the payload to the expected type
+            callback(payload as unknown as RealtimePostgresChangesPayload<T>);
           }
         )
         .subscribe((status) => {

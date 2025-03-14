@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -19,80 +19,65 @@ import {
   Trash2, 
   ArrowUpDown,
   Image as ImageIcon,
-  X
+  X,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { RoomFormDialog } from "./RoomFormDialog";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-
-// Mock room data type
-interface Room {
-  id: number;
-  name: string;
-  number: string;
-  location: string;
-  capacity: number;
-  available: boolean;
-  amenities: string[];
-  maintenanceSchedule: string;
-  photos?: string[];
-}
+import { Room, getRooms, deleteRoom } from "@/services/RoomManagementService";
+import { Spinner } from "@/components/ui/spinner";
 
 export function RoomList() {
   // State for room data and operations
-  const [rooms, setRooms] = useState<Room[]>([
-    {
-      id: 1,
-      name: "Executive Boardroom",
-      number: "101",
-      location: "1st Floor, Building A",
-      capacity: 12,
-      available: true,
-      amenities: ["Projector", "Video Conferencing", "Whiteboard"],
-      maintenanceSchedule: "First Monday of every month",
-      photos: ["https://placehold.co/400x300/2C3E50/FFFFFF?text=Executive+Boardroom"]
-    },
-    {
-      id: 2,
-      name: "Conference Room Alpha",
-      number: "202",
-      location: "2nd Floor, Building B",
-      capacity: 20,
-      available: true,
-      amenities: ["Projector", "Sound System", "Whiteboard"],
-      maintenanceSchedule: "Every other Friday",
-      photos: ["https://placehold.co/400x300/3498DB/FFFFFF?text=Conference+Room"]
-    },
-    {
-      id: 3,
-      name: "Small Meeting Room",
-      number: "303",
-      location: "3rd Floor, Building A",
-      capacity: 6,
-      available: false,
-      amenities: ["TV Screen", "Whiteboard"],
-      maintenanceSchedule: "Last Friday of every month",
-      photos: ["https://placehold.co/400x300/E74C3C/FFFFFF?text=Meeting+Room"]
-    },
-  ]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // UI state
   const [search, setSearch] = useState("");
-  const [selectedRooms, setSelectedRooms] = useState<number[]>([]);
+  const [selectedRooms, setSelectedRooms] = useState<string[]>([]);
   const [editRoom, setEditRoom] = useState<Room | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [roomToDelete, setRoomToDelete] = useState<number | null>(null);
+  const [roomToDelete, setRoomToDelete] = useState<string | null>(null);
   const [sortField, setSortField] = useState<keyof Room>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-  const [showPhotos, setShowPhotos] = useState<number | null>(null);
+  const [showPhotos, setShowPhotos] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch rooms on component mount
+  useEffect(() => {
+    fetchRooms();
+  }, []);
+
+  const fetchRooms = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await getRooms();
+      setRooms(data);
+    } catch (err) {
+      console.error("Error fetching rooms:", err);
+      setError("Failed to load rooms. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchRooms();
+    setIsRefreshing(false);
+  };
 
   // Filter rooms based on search
   const filteredRooms = rooms.filter(room => 
     room.name.toLowerCase().includes(search.toLowerCase()) ||
-    room.number.includes(search) ||
-    room.location.toLowerCase().includes(search.toLowerCase())
+    (room.number && room.number.includes(search)) ||
+    (room.location && room.location.toLowerCase().includes(search.toLowerCase()))
   );
 
   // Sort rooms based on current sort field and direction
@@ -136,32 +121,38 @@ export function RoomList() {
   };
 
   // Handle delete confirmation
-  const handleDeleteConfirm = (id: number) => {
+  const handleDeleteConfirm = (id: string) => {
     setRoomToDelete(id);
     setIsDeleteConfirmOpen(true);
   };
 
   // Handle actual deletion
-  const handleDeleteRoom = () => {
+  const handleDeleteRoom = async () => {
     if (roomToDelete !== null) {
-      setRooms(rooms.filter(room => room.id !== roomToDelete));
-      toast({
-        title: "Room deleted",
-        description: "The room has been successfully removed"
-      });
-      setIsDeleteConfirmOpen(false);
-      setRoomToDelete(null);
+      try {
+        await deleteRoom(roomToDelete);
+        setRooms(rooms.filter(room => room.id !== roomToDelete));
+        setIsDeleteConfirmOpen(false);
+        setRoomToDelete(null);
+      } catch (err) {
+        console.error("Error deleting room:", err);
+      }
     }
   };
 
   // Handle batch deletion
-  const handleBatchDelete = () => {
-    setRooms(rooms.filter(room => !selectedRooms.includes(room.id)));
-    toast({
-      title: `${selectedRooms.length} rooms deleted`,
-      description: "The selected rooms have been removed"
-    });
-    setSelectedRooms([]);
+  const handleBatchDelete = async () => {
+    try {
+      for (const roomId of selectedRooms) {
+        await deleteRoom(roomId);
+      }
+      setRooms(rooms.filter(room => !selectedRooms.includes(room.id)));
+      toast.success(`${selectedRooms.length} rooms deleted`);
+      setSelectedRooms([]);
+    } catch (err) {
+      console.error("Error batch deleting rooms:", err);
+      toast.error("Failed to delete some rooms");
+    }
   };
 
   // Handle room update from edit form
@@ -171,11 +162,11 @@ export function RoomList() {
     ));
     setIsEditOpen(false);
     setEditRoom(null);
-    
-    toast({
-      title: "Room updated",
-      description: "Room details have been updated successfully"
-    });
+  };
+
+  // Handle room created from form
+  const handleRoomCreated = (newRoom: Room) => {
+    setRooms([...rooms, newRoom]);
   };
 
   // Handle select all checkbox
@@ -188,7 +179,7 @@ export function RoomList() {
   };
 
   // Handle individual row selection
-  const handleSelectRoom = (id: number) => {
+  const handleSelectRoom = (id: string) => {
     if (selectedRooms.includes(id)) {
       setSelectedRooms(selectedRooms.filter(roomId => roomId !== id));
     } else {
@@ -197,9 +188,31 @@ export function RoomList() {
   };
 
   // Handle view photos
-  const handleViewPhotos = (id: number) => {
+  const handleViewPhotos = (id: string) => {
     setShowPhotos(id);
   };
+
+  // If loading, show spinner
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Spinner size="lg" />
+        <span className="ml-3 text-muted-foreground">Loading rooms...</span>
+      </div>
+    );
+  }
+
+  // If error, show error message
+  if (error) {
+    return (
+      <div className="rounded-md border border-destructive p-4 text-center">
+        <p className="text-destructive mb-4">{error}</p>
+        <Button onClick={fetchRooms} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -216,6 +229,16 @@ export function RoomList() {
         </div>
         
         <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-1"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Refresh
+          </Button>
+          
           <Button variant="outline" className="flex items-center gap-1">
             <Filter className="h-4 w-4" />
             Filter
@@ -284,13 +307,12 @@ export function RoomList() {
               <TableHead>
                 <button 
                   className="flex items-center hover:text-primary"
-                  onClick={() => handleSort('available')}
+                  onClick={() => handleSort('status')}
                 >
                   Status
                   <ArrowUpDown className="ml-1 h-4 w-4" />
                 </button>
               </TableHead>
-              <TableHead>Amenities</TableHead>
               <TableHead>Photos</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -298,7 +320,7 @@ export function RoomList() {
           <TableBody>
             {sortedRooms.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
                   No rooms found
                 </TableCell>
               </TableRow>
@@ -313,30 +335,24 @@ export function RoomList() {
                     />
                   </TableCell>
                   <TableCell className="font-medium">{room.name}</TableCell>
-                  <TableCell>{room.number}</TableCell>
-                  <TableCell>{room.location}</TableCell>
-                  <TableCell>{room.capacity}</TableCell>
+                  <TableCell>{room.number || '-'}</TableCell>
+                  <TableCell>{room.location || '-'}</TableCell>
+                  <TableCell>{room.capacity || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant={room.available ? "secondary" : "destructive"}>
-                      {room.available ? "Available" : "Unavailable"}
+                    <Badge 
+                      variant={
+                        room.status === 'active' ? "secondary" : 
+                        room.status === 'maintenance' ? "warning" : 
+                        "destructive"
+                      }
+                    >
+                      {room.status === 'active' ? "Available" : 
+                       room.status === 'maintenance' ? "Maintenance" : 
+                       "Unavailable"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {room.amenities.slice(0, 2).map((amenity, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          {amenity}
-                        </Badge>
-                      ))}
-                      {room.amenities.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{room.amenities.length - 2} more
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {room.photos && room.photos.length > 0 ? (
+                    {room.image_url ? (
                       <Button 
                         variant="ghost" 
                         size="sm" 
@@ -412,16 +428,18 @@ export function RoomList() {
           <DialogHeader>
             <DialogTitle>Room Photos</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 my-4">
-            {showPhotos !== null && rooms.find(r => r.id === showPhotos)?.photos?.map((photo, i) => (
-              <div key={i} className="relative aspect-video rounded-md overflow-hidden">
-                <img 
-                  src={photo} 
-                  alt={`Room photo ${i + 1}`} 
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ))}
+          <div className="grid grid-cols-1 gap-4 my-4">
+            {showPhotos !== null && 
+              rooms.find(r => r.id === showPhotos)?.image_url && (
+                <div className="relative aspect-video rounded-md overflow-hidden">
+                  <img 
+                    src={rooms.find(r => r.id === showPhotos)?.image_url} 
+                    alt="Room photo" 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )
+            }
           </div>
         </DialogContent>
       </Dialog>

@@ -33,6 +33,39 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          resource_id: string | null
+          resource_type: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          resource_id?: string | null
+          resource_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       auth_settings: {
         Row: {
           id: string
@@ -51,6 +84,36 @@ export type Database = {
           setting_key?: string
           setting_value?: Json
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_history: {
+        Row: {
+          backup_date: string
+          backup_name: string
+          backup_size: number | null
+          created_by: string | null
+          details: Json | null
+          id: string
+          status: string
+        }
+        Insert: {
+          backup_date?: string
+          backup_name: string
+          backup_size?: number | null
+          created_by?: string | null
+          details?: Json | null
+          id?: string
+          status: string
+        }
+        Update: {
+          backup_date?: string
+          backup_name?: string
+          backup_size?: number | null
+          created_by?: string | null
+          details?: Json | null
+          id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -241,6 +304,36 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          delivery_methods: Json
+          enabled: boolean
+          id: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_methods?: Json
+          enabled?: boolean
+          id?: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivery_methods?: Json
+          enabled?: boolean
+          id?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           booking_id: string
@@ -326,6 +419,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_data: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          report_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          id?: string
+          report_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          report_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_data_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
             referencedColumns: ["id"]
           },
         ]
@@ -542,6 +664,27 @@ export type Database = {
           },
         ]
       }
+      room_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           building: string | null
@@ -636,6 +779,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_health: {
+        Row: {
+          category: string
+          details: Json | null
+          id: string
+          last_check: string
+          status: string
+        }
+        Insert: {
+          category: string
+          details?: Json | null
+          id?: string
+          last_check?: string
+          status: string
+        }
+        Update: {
+          category?: string
+          details?: Json | null
+          id?: string
+          last_check?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      user_role_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       users: {
         Row: {

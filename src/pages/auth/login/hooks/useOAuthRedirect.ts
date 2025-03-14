@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, Location } from "react-router-dom";
 import { supabase } from "@/lib/supabase-client";
 import { toast } from "sonner";
-import { checkSuperAdminEmail, setSuperAdminRole } from "@/contexts/auth/actions";
 
 interface UseOAuthRedirectParams {
   location: Location;
@@ -44,22 +43,7 @@ export const useOAuthRedirect = ({
             toast.error("Authentication failed: " + error.message);
           } else if (data.session) {
             console.log('Successfully authenticated after redirect');
-            
-            // Check if user should be a superadmin and set role if needed
-            const userEmail = data.session.user.email;
-            if (userEmail) {
-              const isSuperAdmin = await checkSuperAdminEmail(userEmail);
-              if (isSuperAdmin) {
-                console.log(`User ${userEmail} is configured as superadmin, setting role...`);
-                await setSuperAdminRole(data.session.user.id);
-                toast.success("Logged in as Superadmin!");
-              } else {
-                toast.success("Successfully signed in!");
-              }
-            } else {
-              toast.success("Successfully signed in!");
-            }
-            
+            toast.success("Successfully signed in!");
             navigate(from, { replace: true });
           } else {
             console.log('No session found after redirect');

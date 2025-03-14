@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Steps } from "lucide-react";
+import { LayoutGuide } from "lucide-react";
 
 interface WalkthroughStep {
   title: string;
@@ -79,7 +79,7 @@ export function GuidedWalkthrough() {
             </div>
             <DialogTrigger asChild>
               <Button className="gap-2">
-                <Steps className="h-4 w-4" />
+                <LayoutGuide className="h-4 w-4" />
                 Start Guided Tour
               </Button>
             </DialogTrigger>

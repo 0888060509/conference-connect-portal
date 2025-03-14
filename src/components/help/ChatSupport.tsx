@@ -108,7 +108,7 @@ export function ChatSupport() {
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" /> Live Chat Support
           </CardTitle>
-          <Badge variant={isOnline ? "success" : "outline"}>
+          <Badge variant={isOnline ? "default" : "outline"}>
             {isOnline ? "Online" : "Offline"}
           </Badge>
         </div>

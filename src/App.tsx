@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/auth";
 import { NotificationProvider } from "@/contexts/NotificationContext";
+import { NetworkProvider } from "@/contexts/NetworkContext";
 import PrivateRoute from "@/components/auth/PrivateRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -30,8 +31,22 @@ import Reports from "./pages/Reports";
 import { useEffect } from "react";
 import { requestNotificationPermission } from "./utils/notificationUtils";
 import ResetPasswordPage from "./pages/auth/reset-password/ResetPasswordPage";
+import { initDataSync } from "./lib/data-sync";
 
-const queryClient = new QueryClient();
+// Configure React Query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: true,
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+    },
+  },
+});
 
 // For demo purposes, toggle this to show the Landing or App
 const SHOW_LANDING = false;
@@ -45,6 +60,9 @@ const App = () => {
     
     requestPermissions();
     
+    // Initialize data synchronization
+    initDataSync();
+    
     // Add manifest link
     const link = document.createElement('link');
     link.rel = 'manifest';
@@ -55,50 +73,52 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <NotificationProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                {SHOW_LANDING ? (
-                  <Route path="/" element={<Landing />} />
-                ) : (
-                  <>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
-                    
-                    {/* Protected routes */}
-                    <Route element={<PrivateRoute />}>
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/bookings" element={<Bookings />} />
-                      <Route path="/my-bookings" element={<MyBookings />} />
-                      <Route path="/calendar" element={<Calendar />} />
-                      <Route path="/rooms" element={<Rooms />} />
-                      <Route path="/rooms/:id" element={<RoomDetail />} />
-                      <Route path="/reports" element={<Reports />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/notification-preferences" element={<NotificationPreferences />} />
-                      <Route path="/help" element={<HelpCenter />} />
-                    </Route>
-                    
-                    {/* Admin-only routes */}
-                    <Route element={<PrivateRoute requireAdmin={true} />}>
-                      <Route path="/admin" element={<AdminPanel />} />
-                      <Route path="/admin/rooms" element={<RoomAdmin />} />
-                      <Route path="/admin/settings" element={<SystemSettings />} />
-                      <Route path="/admin/waitlist" element={<WaitlistAdmin />} />
-                      <Route path="/admin/conflict-rules" element={<ConflictRulesAdmin />} />
-                    </Route>
-                  </>
-                )}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </NotificationProvider>
+        <NetworkProvider>
+          <NotificationProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  {SHOW_LANDING ? (
+                    <Route path="/" element={<Landing />} />
+                  ) : (
+                    <>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/reset-password" element={<ResetPasswordPage />} />
+                      
+                      {/* Protected routes */}
+                      <Route element={<PrivateRoute />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/bookings" element={<Bookings />} />
+                        <Route path="/my-bookings" element={<MyBookings />} />
+                        <Route path="/calendar" element={<Calendar />} />
+                        <Route path="/rooms" element={<Rooms />} />
+                        <Route path="/rooms/:id" element={<RoomDetail />} />
+                        <Route path="/reports" element={<Reports />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/notifications" element={<Notifications />} />
+                        <Route path="/notification-preferences" element={<NotificationPreferences />} />
+                        <Route path="/help" element={<HelpCenter />} />
+                      </Route>
+                      
+                      {/* Admin-only routes */}
+                      <Route element={<PrivateRoute requireAdmin={true} />}>
+                        <Route path="/admin" element={<AdminPanel />} />
+                        <Route path="/admin/rooms" element={<RoomAdmin />} />
+                        <Route path="/admin/settings" element={<SystemSettings />} />
+                        <Route path="/admin/waitlist" element={<WaitlistAdmin />} />
+                        <Route path="/admin/conflict-rules" element={<ConflictRulesAdmin />} />
+                      </Route>
+                    </>
+                  )}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </NotificationProvider>
+        </NetworkProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

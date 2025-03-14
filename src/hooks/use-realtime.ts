@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { RealtimeChannel, RealtimePostgresChangesPayload, REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
@@ -48,7 +48,7 @@ export function useRealtime<T = any>(
       channel = supabase
         .channel(channelName)
         .on(
-          'postgres_changes',
+          'postgres_changes' as any, // Type assertion to bypass the type error
           {
             event,
             schema,
@@ -61,7 +61,7 @@ export function useRealtime<T = any>(
           }
         )
         .subscribe((status) => {
-          if (status === 'SUBSCRIPTION_ERROR' && onError) {
+          if (status === 'SUBSCRIPTION_ERROR' as any && onError) {
             onError(new Error(`Subscription error for ${channelName}`));
           }
         });

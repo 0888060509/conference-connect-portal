@@ -1,6 +1,6 @@
 
 interface RoomStatusIndicatorProps {
-  status: "available" | "partial" | "booked";
+  status: "available" | "partial" | "booked" | "conflict";
   label?: string;
   size?: "sm" | "md" | "lg";
 }
@@ -14,6 +14,8 @@ export function RoomStatusIndicator({ status, label, size = "md" }: RoomStatusIn
         return "bg-warning/20 border-warning/40";
       case "booked":
         return "bg-destructive/20 border-destructive/40";
+      case "conflict":
+        return "bg-purple-500/20 border-purple-500/40";
       default:
         return "bg-muted border-muted-foreground/40";
     }
@@ -27,6 +29,8 @@ export function RoomStatusIndicator({ status, label, size = "md" }: RoomStatusIn
         return "text-warning";
       case "booked":
         return "text-destructive";
+      case "conflict":
+        return "text-purple-500";
       default:
         return "text-muted-foreground";
     }

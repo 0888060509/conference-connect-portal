@@ -3,7 +3,7 @@ import { User, UserImpl } from "../types";
 import { supabase } from "@/integrations/supabase/client";
 
 // Define the session timeout duration (30 minutes)
-const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000;
+export const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000;
 
 // Helper function to set a session timeout
 export const setSessionTimeout = (logoutCallback: () => void): NodeJS.Timeout => {
@@ -14,42 +14,61 @@ export const setSessionTimeout = (logoutCallback: () => void): NodeJS.Timeout =>
 export const initializeAuthState = async (
   setUser: (user: User | null) => void,
   resetSessionTimeout: () => void,
-  setIsLoading: (isLoading: boolean) => void
+  setIsLoading: (isLoading: boolean) => void,
+  userData?: any
 ) => {
   try {
-    // Check for an active session in Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (session?.user) {
-      // If we have a session, fetch the user data from our users table
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+    // If userData was provided, use it directly
+    if (userData) {
+      const user = new UserImpl({
+        id: userData.id,
+        email: userData.email,
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
+        role: userData.role,
+        department: userData.department,
+        created_at: userData.created_at,
+        last_login: userData.last_login,
+        preferences: userData.preferences
+      });
       
-      if (userData) {
-        const user = new UserImpl({
-          id: userData.id,
-          email: userData.email,
-          first_name: userData.first_name || '',
-          last_name: userData.last_name || '',
-          role: userData.role,
-          department: userData.department,
-          created_at: userData.created_at,
-          last_login: userData.last_login,
-          preferences: userData.preferences
-        });
+      setUser(user);
+      resetSessionTimeout();
+    } else {
+      // Check for an active session in Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // If we have a session, fetch the user data from our users table
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
         
-        setUser(user);
-        resetSessionTimeout();
+        if (userData) {
+          const user = new UserImpl({
+            id: userData.id,
+            email: userData.email,
+            first_name: userData.first_name || '',
+            last_name: userData.last_name || '',
+            role: userData.role,
+            department: userData.department,
+            created_at: userData.created_at,
+            last_login: userData.last_login,
+            preferences: userData.preferences
+          });
+          
+          setUser(user);
+          resetSessionTimeout();
+        } else {
+          // If no user data found, check local storage as fallback
+          checkLocalStorage(setUser, resetSessionTimeout);
+        }
       } else {
-        // If no user data found, check local storage as fallback
+        // If no active session, check local storage as fallback for demo purposes
         checkLocalStorage(setUser, resetSessionTimeout);
       }
-    } else {
-      // If no active session, check local storage as fallback for demo purposes
-      checkLocalStorage(setUser, resetSessionTimeout);
     }
   } catch (err) {
     console.error("Error initializing auth state:", err);

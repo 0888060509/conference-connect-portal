@@ -29,6 +29,7 @@ import HelpCenter from "./pages/HelpCenter";
 import Reports from "./pages/Reports";
 import { useEffect } from "react";
 import { requestNotificationPermission } from "./utils/notificationUtils";
+import ResetPasswordPage from "./pages/auth/reset-password/ResetPasswordPage";
 
 const queryClient = new QueryClient();
 
@@ -66,6 +67,7 @@ const App = () => {
                   <>
                     <Route path="/" element={<Index />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                     
                     {/* Protected routes */}
                     <Route element={<PrivateRoute />}>

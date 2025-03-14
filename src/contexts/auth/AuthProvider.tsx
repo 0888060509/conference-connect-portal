@@ -12,6 +12,8 @@ import {
   setupAuthStateChangeListener
 } from "./utils/sessionUtils";
 import { useSessionTimeout } from "./hooks/useSessionTimeout";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -23,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Define logout function ahead to use in useSessionTimeout hook
   const logout = useCallback(async () => {
     await logoutUser(sessionTimeout, setUser, setSessionTimeoutState);
+    toast.success("You've been signed out successfully");
   }, []);
 
   // Use the session timeout hook
@@ -34,9 +37,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for stored user on initial load
   useEffect(() => {
-    // Simulate network delay to make loading state visible
+    const initAuth = async () => {
+      setIsLoading(true);
+      try {
+        // First, check for a Supabase session
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          console.log("Found Supabase session:", session);
+          
+          // Get user data from Supabase
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (userData) {
+            console.log("User data found:", userData);
+            initializeAuthState(setUser, resetSessionTimeout, setIsLoading, userData);
+          } else {
+            console.log("No user data found, falling back to session initialization");
+            initializeAuthState(setUser, resetSessionTimeout, setIsLoading);
+          }
+        } else {
+          console.log("No Supabase session, checking local storage");
+          initializeAuthState(setUser, resetSessionTimeout, setIsLoading);
+        }
+      } catch (err) {
+        console.error("Error during auth initialization:", err);
+        initializeAuthState(setUser, resetSessionTimeout, setIsLoading);
+      }
+    };
+    
+    // Small delay to make loading state visible
     setTimeout(() => {
-      initializeAuthState(setUser, resetSessionTimeout, setIsLoading);
+      initAuth();
     }, 1000);
     
     // Set up auth state change listener

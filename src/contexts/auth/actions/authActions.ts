@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { User, MOCK_USERS, UserImpl } from "../types";
 import { handleExternalAuthUser } from "../utils/sessionUtils";
@@ -23,6 +24,8 @@ export const loginWithCredentials = async (
     
     if (data.user) {
       // Supabase auth successful
+      console.log("Supabase auth successful:", data.user);
+      
       // Fetch additional user data from our users table
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -53,9 +56,37 @@ export const loginWithCredentials = async (
         // Set session expiry
         resetSessionTimeout();
         return;
+      } else {
+        console.warn("User authenticated but no profile data found");
+        
+        // Create a basic user object from auth data
+        const user = new UserImpl({
+          id: data.user.id,
+          email: data.user.email || '',
+          first_name: data.user.user_metadata.first_name || '',
+          last_name: data.user.user_metadata.last_name || '',
+          role: 'user', // Default role
+          created_at: data.user.created_at
+        });
+        
+        setUser(user);
+        
+        // Store session info if "remember me" is checked
+        if (remember) {
+          localStorage.setItem("meetingmaster_user", JSON.stringify(user));
+        }
+        
+        // Set session expiry
+        resetSessionTimeout();
+        return;
       }
+    }
+    
+    if (supabaseError) {
+      console.error("Supabase auth error:", supabaseError);
       
-      throw new Error("User data not found");
+      // For demo purposes, fall back to mock authentication
+      console.warn("Falling back to mock authentication");
     }
     
     // If Supabase auth fails, try mock authentication for demo purposes
@@ -126,15 +157,7 @@ export const resetUserPassword = async (
       throw supabaseError;
     }
     
-    // For demo purposes, also check mock users
-    const foundUser = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-    
-    if (!foundUser) {
-      // We don't throw an error here to prevent user enumeration
-      console.log(`Password reset requested for ${email} (not in mock users)`);
-    } else {
-      console.log(`Password reset requested for ${email} (mock user)`);
-    }
+    console.log(`Password reset requested for ${email}`);
     
     return Promise.resolve();
   } catch (err) {
@@ -211,12 +234,56 @@ export const createNewUser = async (
     
     if (error) throw error;
     
-    // User will be created automatically in the users table via the database trigger
-    
     return data;
   } catch (err) {
     setError(err instanceof Error ? err.message : "Failed to create user");
     throw err;
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+export const updateUserProfile = async (
+  userId: string,
+  updates: {
+    first_name?: string;
+    last_name?: string;
+    department?: string;
+  },
+  setIsLoading: (isLoading: boolean) => void,
+  setError: (error: string | null) => void
+) => {
+  try {
+    setIsLoading(true);
+    setError(null);
+    
+    // Update user metadata in Supabase Auth
+    const { error: authError } = await supabase.auth.updateUser({
+      data: {
+        first_name: updates.first_name,
+        last_name: updates.last_name
+      }
+    });
+    
+    if (authError) throw authError;
+    
+    // Update user data in our users table
+    const { error: dbError } = await supabase
+      .from('users')
+      .update({
+        first_name: updates.first_name,
+        last_name: updates.last_name,
+        department: updates.department,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+    
+    if (dbError) throw dbError;
+    
+    return true;
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to update profile");
+    return false;
   } finally {
     setIsLoading(false);
   }

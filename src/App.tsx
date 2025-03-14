@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -51,19 +50,69 @@ const queryClient = new QueryClient({
 // For demo purposes, toggle this to show the Landing or App
 const SHOW_LANDING = false;
 
+const AppProviders = ({ children }) => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <NetworkProvider>
+        <NotificationProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            {children}
+          </TooltipProvider>
+        </NotificationProvider>
+      </NetworkProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
+
+const AppRoutes = () => {
+    return (
+      <Routes>
+        {SHOW_LANDING ? (
+          <Route path="/" element={<Landing />} />
+        ) : (
+          <>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+            {/* Protected routes */}
+            <Route element={<PrivateRoute />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/my-bookings" element={<MyBookings />} />
+              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/rooms" element={<Rooms />} />
+              <Route path="/rooms/:id" element={<RoomDetail />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/notification-preferences" element={<NotificationPreferences />} />
+              <Route path="/help" element={<HelpCenter />} />
+            </Route>
+
+            {/* Admin-only routes */}
+            <Route element={<PrivateRoute requireAdmin={true} />}>
+              <Route path="/admin" element={<AdminPanel />} />
+              <Route path="/admin/rooms" element={<RoomAdmin />} />
+              <Route path="/admin/settings" element={<SystemSettings />} />
+              <Route path="/admin/waitlist" element={<WaitlistAdmin />} />
+              <Route path="/admin/conflict-rules" element={<ConflictRulesAdmin />} />
+            </Route>
+          </>
+        )}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    );
+  };
+
+
 const App = () => {
-  // Request notification permission when the app starts
   useEffect(() => {
-    const requestPermissions = async () => {
-      await requestNotificationPermission();
-    };
-    
-    requestPermissions();
-    
-    // Initialize data synchronization
+    requestNotificationPermission();
     initDataSync();
-    
-    // Add manifest link
+
     const link = document.createElement('link');
     link.rel = 'manifest';
     link.href = '/manifest.json';
@@ -71,56 +120,11 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <NetworkProvider>
-          <NotificationProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  {SHOW_LANDING ? (
-                    <Route path="/" element={<Landing />} />
-                  ) : (
-                    <>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/reset-password" element={<ResetPasswordPage />} />
-                      
-                      {/* Protected routes */}
-                      <Route element={<PrivateRoute />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/bookings" element={<Bookings />} />
-                        <Route path="/my-bookings" element={<MyBookings />} />
-                        <Route path="/calendar" element={<Calendar />} />
-                        <Route path="/rooms" element={<Rooms />} />
-                        <Route path="/rooms/:id" element={<RoomDetail />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/notifications" element={<Notifications />} />
-                        <Route path="/notification-preferences" element={<NotificationPreferences />} />
-                        <Route path="/help" element={<HelpCenter />} />
-                      </Route>
-                      
-                      {/* Admin-only routes */}
-                      <Route element={<PrivateRoute requireAdmin={true} />}>
-                        <Route path="/admin" element={<AdminPanel />} />
-                        <Route path="/admin/rooms" element={<RoomAdmin />} />
-                        <Route path="/admin/settings" element={<SystemSettings />} />
-                        <Route path="/admin/waitlist" element={<WaitlistAdmin />} />
-                        <Route path="/admin/conflict-rules" element={<ConflictRulesAdmin />} />
-                      </Route>
-                    </>
-                  )}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </NotificationProvider>
-        </NetworkProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <BrowserRouter>
+      <AppProviders>
+        <AppRoutes />
+      </AppProviders>
+    </BrowserRouter>
   );
 };
 

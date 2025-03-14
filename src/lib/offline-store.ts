@@ -4,6 +4,7 @@ import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
 import { supabaseClient } from '@/lib/supabase-client';
 
+// Define the schema structure for the database
 interface MeetingMasterDB extends DBSchema {
   rooms: {
     key: string;

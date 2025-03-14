@@ -4,18 +4,18 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-// Create supabase client using the imported one's configs
+// Create supabase client using the imported one's URL and key
 export const supabaseClient = createClient<Database>(
-  supabase.authUrl,
-  supabase.supabaseKey,
+  supabase.getUrl(),
+  supabase.getPublicKey(),
   {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
     },
     global: {
-      fetch: (...args) => {
-        return fetch(...args);
+      fetch: (url, options) => {
+        return fetch(url, options);
       },
     },
   }

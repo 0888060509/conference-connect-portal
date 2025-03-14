@@ -233,16 +233,14 @@ export const createBooking = async (
     
     // If there are attendees, add them to the booking
     if (booking.attendees && booking.attendees.length > 0 && bookingData?.id) {
-      const attendeeRecords = booking.attendees.map(userId => ({
-        booking_id: bookingData.id,
-        user_id: userId,
-        status: 'invited'
-      }));
-      
-      for (const attendee of attendeeRecords) {
+      for (const userId of booking.attendees) {
         const { error: attendeeError } = await supabaseClient
           .from('booking_attendees')
-          .insert(attendee);
+          .insert({
+            booking_id: bookingData.id,
+            user_id: userId,
+            status: 'invited' as const
+          });
         
         if (attendeeError) {
           console.error('Failed to add attendee:', attendeeError);

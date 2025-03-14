@@ -1,4 +1,3 @@
-
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
@@ -14,7 +13,7 @@ interface PendingOperation {
   processed: boolean;
 }
 
-// Define a custom DBSchemaValue type to extend the DBSchema with our PendingOperation
+// Define a custom interface for the pending operations store
 interface PendingOperationsStore {
   key: number;
   value: PendingOperation;
@@ -43,21 +42,27 @@ const initDB = async () => {
     dbPromise = openDB<MeetingMasterDB>('meeting-master', 1, {
       upgrade(db) {
         // Create rooms store
-        const roomsStore = db.createObjectStore('rooms', { keyPath: 'id' });
-        roomsStore.createIndex('by-name', 'name');
+        if (!db.objectStoreNames.contains('rooms')) {
+          const roomsStore = db.createObjectStore('rooms', { keyPath: 'id' });
+          roomsStore.createIndex('by-name', 'name');
+        }
         
         // Create bookings store
-        const bookingsStore = db.createObjectStore('bookings', { keyPath: 'id' });
-        bookingsStore.createIndex('by-user', 'user_id');
-        bookingsStore.createIndex('by-room', 'room_id');
-        bookingsStore.createIndex('by-start-date', 'start_time');
+        if (!db.objectStoreNames.contains('bookings')) {
+          const bookingsStore = db.createObjectStore('bookings', { keyPath: 'id' });
+          bookingsStore.createIndex('by-user', 'user_id');
+          bookingsStore.createIndex('by-room', 'room_id');
+          bookingsStore.createIndex('by-start-date', 'start_time');
+        }
         
         // Create pending operations store for offline sync
-        const pendingStore = db.createObjectStore('pendingOperations', { 
-          keyPath: 'id', 
-          autoIncrement: true 
-        });
-        pendingStore.createIndex('by-processed', 'processed');
+        if (!db.objectStoreNames.contains('pendingOperations')) {
+          const pendingStore = db.createObjectStore('pendingOperations', { 
+            keyPath: 'id', 
+            autoIncrement: true 
+          });
+          pendingStore.createIndex('by-processed', 'processed');
+        }
       }
     });
   }
@@ -162,7 +167,6 @@ export const offlineStore = {
   }
 };
 
-// Utility to sync pending operations when back online
 export const syncPendingOperations = async (): Promise<void> => {
   const pendingOps = await offlineStore.getPendingOperations();
   if (pendingOps.length === 0) return;

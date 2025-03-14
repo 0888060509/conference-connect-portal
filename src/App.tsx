@@ -26,6 +26,7 @@ import NotificationPreferences from "./pages/NotificationPreferences";
 import WaitlistAdmin from "./pages/WaitlistAdmin";
 import ConflictRulesAdmin from "./pages/ConflictRulesAdmin";
 import HelpCenter from "./pages/HelpCenter";
+import Reports from "./pages/Reports";
 import { useEffect } from "react";
 import { requestNotificationPermission } from "./utils/notificationUtils";
 
@@ -74,6 +75,7 @@ const App = () => {
                       <Route path="/calendar" element={<Calendar />} />
                       <Route path="/rooms" element={<Rooms />} />
                       <Route path="/rooms/:id" element={<RoomDetail />} />
+                      <Route path="/reports" element={<Reports />} />
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/notification-preferences" element={<NotificationPreferences />} />

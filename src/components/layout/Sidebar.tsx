@@ -1,9 +1,10 @@
+
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { 
   Home, Calendar, BookOpen, Building2, UserCircle, Bell, Settings, 
-  ChevronLeft, ChevronRight, LayoutDashboard, User, HelpCircle
+  ChevronLeft, ChevronRight, LayoutDashboard, User, HelpCircle, BarChart
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -116,6 +117,13 @@ export function Sidebar({ collapsed, toggleSidebar }: SidebarProps) {
                 label="Rooms"
                 path="/rooms"
                 active={isActive("/rooms")}
+                collapsed={collapsed}
+              />
+              <NavItem
+                icon={BarChart}
+                label="Reports"
+                path="/reports"
+                active={isActive("/reports")}
                 collapsed={collapsed}
               />
               <NavItem

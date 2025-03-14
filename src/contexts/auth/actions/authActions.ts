@@ -1,5 +1,4 @@
-
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { User, MOCK_USERS, UserImpl } from "../types";
 import { handleExternalAuthUser } from "../utils/sessionUtils";
 
@@ -22,7 +21,7 @@ export const loginWithCredentials = async (
       password
     });
     
-    if (data.user) {
+    if (data?.user) {
       // Supabase auth successful
       console.log("Supabase auth successful:", data.user);
       
@@ -39,7 +38,7 @@ export const loginWithCredentials = async (
           email: userData.email,
           first_name: userData.first_name || '',
           last_name: userData.last_name || '',
-          role: userData.role,
+          role: userData.role || 'user',
           department: userData.department,
           created_at: userData.created_at,
           last_login: userData.last_login,
@@ -63,8 +62,8 @@ export const loginWithCredentials = async (
         const user = new UserImpl({
           id: data.user.id,
           email: data.user.email || '',
-          first_name: data.user.user_metadata.first_name || '',
-          last_name: data.user.user_metadata.last_name || '',
+          first_name: data.user.user_metadata?.first_name || '',
+          last_name: data.user.user_metadata?.last_name || '',
           role: 'user', // Default role
           created_at: data.user.created_at
         });
@@ -150,7 +149,7 @@ export const resetUserPassword = async (
     
     // Try Supabase password reset
     const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/reset-password',
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     
     if (supabaseError) {
@@ -188,8 +187,7 @@ export const signInWithGoogleAuth = async (
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
-        },
-        skipBrowserRedirect: false
+        }
       }
     });
     

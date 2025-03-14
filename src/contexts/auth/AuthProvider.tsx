@@ -12,7 +12,7 @@ import {
   setupAuthStateChangeListener
 } from "./utils/sessionUtils";
 import { useSessionTimeout } from "./hooks/useSessionTimeout";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
 import { toast } from "sonner";
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -62,18 +62,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else {
           console.log("No Supabase session, checking local storage");
+          setIsLoading(false); // Set loading to false immediately if no session found
           initializeAuthState(setUser, resetSessionTimeout, setIsLoading);
         }
       } catch (err) {
         console.error("Error during auth initialization:", err);
+        setIsLoading(false); // Ensure loading state is updated even if there's an error
         initializeAuthState(setUser, resetSessionTimeout, setIsLoading);
       }
     };
     
-    // Small delay to make loading state visible
-    setTimeout(() => {
-      initAuth();
-    }, 1000);
+    // Initialize auth immediately without delay
+    initAuth();
     
     // Set up auth state change listener
     const { data: { subscription } } = setupAuthStateChangeListener(setUser, resetSessionTimeout);

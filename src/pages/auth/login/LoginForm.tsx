@@ -9,7 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DemoCredentials from "./DemoCredentials";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase-client";
+import { toast } from "sonner";
 
 interface LoginFormProps {
   from: string;
@@ -24,6 +25,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
   const [remember, setRemember] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,13 +45,21 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
           
           if (error) {
             console.error('Error processing auth redirect:', error);
-            throw error;
+            setLocalError(error.message);
+            toast.error("Authentication failed: " + error.message);
           } else if (data.session) {
             console.log('Successfully authenticated after redirect');
+            toast.success("Successfully signed in!");
             navigate(from, { replace: true });
+          } else {
+            console.log('No session found after redirect');
+            setLocalError("Authentication failed: No session found");
+            toast.error("Authentication failed: No session found");
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("Error during OAuth redirect handling:", err);
+          setLocalError(err?.message || "Authentication failed");
+          toast.error("Authentication failed: " + (err?.message || "Unknown error"));
         } finally {
           setIsGoogleSigningIn(false);
         }
@@ -62,11 +72,18 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setLocalError(null);
+    clearError();
+    
     try {
+      console.log("Attempting login with email:", email);
       await login(email, password, remember);
+      toast.success("Successfully logged in!");
       navigate(from, { replace: true });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Login error:", err);
+      setLocalError(err?.message || "Login failed");
+      toast.error("Login failed: " + (err?.message || "Unknown error"));
     } finally {
       setIsSubmitting(false);
     }
@@ -75,15 +92,21 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
   const handleGoogleSignIn = async () => {
     try {
       setIsGoogleSigningIn(true);
+      setLocalError(null);
       clearError();
+      
       console.log("Starting Google sign-in flow");
       await signInWithGoogle();
       // The redirect will happen automatically via Supabase
-    } catch (err) {
+    } catch (err: any) {
       console.error("Google sign in error:", err);
+      setLocalError(err?.message || "Google sign-in failed");
+      toast.error("Google sign-in failed: " + (err?.message || "Unknown error"));
       setIsGoogleSigningIn(false);
     }
   };
+
+  const displayError = error || localError;
 
   return (
     <Card>
@@ -95,9 +118,9 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleLogin} className="space-y-4">
-          {error && (
+          {displayError && (
             <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{displayError}</AlertDescription>
             </Alert>
           )}
 
@@ -110,6 +133,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
+                setLocalError(null);
                 clearError();
               }}
               required
@@ -127,6 +151,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
+                setLocalError(null);
                 clearError();
               }}
               required
@@ -184,4 +209,3 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
       </CardContent>
     </Card>
   );
-}

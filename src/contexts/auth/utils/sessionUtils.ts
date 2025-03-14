@@ -1,3 +1,4 @@
+
 import { User, UserImpl } from "../types";
 import { supabase } from "@/lib/supabase-client";
 
@@ -24,7 +25,7 @@ export const initializeAuthState = async (
         email: userData.email,
         first_name: userData.first_name || '',
         last_name: userData.last_name || '',
-        role: userData.role,
+        role: userData.role || 'user',
         department: userData.department,
         created_at: userData.created_at,
         last_login: userData.last_login,
@@ -33,11 +34,15 @@ export const initializeAuthState = async (
       
       setUser(user);
       resetSessionTimeout();
+      setIsLoading(false);
+      return;
     } else {
       // Check for an active session in Supabase
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
+        console.log("Active session found for user:", session.user.email);
+        
         // If we have a session, fetch the user data from our users table
         const { data: userData, error } = await supabase
           .from('users')
@@ -46,12 +51,13 @@ export const initializeAuthState = async (
           .single();
         
         if (userData) {
+          console.log("User data retrieved from database:", userData.email);
           const user = new UserImpl({
             id: userData.id,
             email: userData.email,
             first_name: userData.first_name || '',
             last_name: userData.last_name || '',
-            role: userData.role,
+            role: userData.role || 'user',
             department: userData.department,
             created_at: userData.created_at,
             last_login: userData.last_login,
@@ -60,12 +66,38 @@ export const initializeAuthState = async (
           
           setUser(user);
           resetSessionTimeout();
+        } else if (error) {
+          console.error("Error fetching user data:", error);
+          // Create a basic user from the session data
+          const user = new UserImpl({
+            id: session.user.id,
+            email: session.user.email || '',
+            first_name: session.user.user_metadata?.first_name || '',
+            last_name: session.user.user_metadata?.last_name || '',
+            role: 'user',
+            created_at: session.user.created_at
+          });
+          
+          setUser(user);
+          resetSessionTimeout();
         } else {
-          // If no user data found, check local storage as fallback
-          checkLocalStorage(setUser, resetSessionTimeout);
+          console.log("No user data found, but session exists. Creating basic user from session.");
+          // Create a basic user from the session data
+          const user = new UserImpl({
+            id: session.user.id,
+            email: session.user.email || '',
+            first_name: session.user.user_metadata?.first_name || '',
+            last_name: session.user.user_metadata?.last_name || '',
+            role: 'user',
+            created_at: session.user.created_at
+          });
+          
+          setUser(user);
+          resetSessionTimeout();
         }
       } else {
         // If no active session, check local storage as fallback for demo purposes
+        console.log("No active session, checking local storage");
         checkLocalStorage(setUser, resetSessionTimeout);
       }
     }
@@ -86,6 +118,7 @@ export const setupAuthStateChangeListener = (
     console.log("Auth state changed:", event);
     
     if (event === 'SIGNED_IN' && session?.user) {
+      console.log("User signed in:", session.user.email);
       // User signed in, fetch their data from our users table
       const { data: userData, error } = await supabase
         .from('users')
@@ -99,7 +132,7 @@ export const setupAuthStateChangeListener = (
           email: userData.email,
           first_name: userData.first_name || '',
           last_name: userData.last_name || '',
-          role: userData.role,
+          role: userData.role || 'user',
           department: userData.department,
           created_at: userData.created_at,
           last_login: userData.last_login,
@@ -108,9 +141,27 @@ export const setupAuthStateChangeListener = (
         
         setUser(user);
         resetSessionTimeout();
+      } else {
+        // If no user data found, create a basic user from session
+        console.log("No user data found in database after sign in. Creating from session.");
+        const user = new UserImpl({
+          id: session.user.id,
+          email: session.user.email || '',
+          first_name: session.user.user_metadata?.first_name || '',
+          last_name: session.user.user_metadata?.last_name || '',
+          role: 'user',
+          created_at: session.user.created_at
+        });
+        
+        setUser(user);
+        resetSessionTimeout();
       }
     } else if (event === 'SIGNED_OUT') {
+      console.log("User signed out");
       setUser(null);
+    } else if (event === 'TOKEN_REFRESHED') {
+      console.log("Token refreshed");
+      // Don't change the user state as this is just a token refresh
     }
   });
 };
@@ -173,13 +224,18 @@ const checkLocalStorage = (
   try {
     const storedUser = localStorage.getItem("meetingmaster_user");
     if (storedUser) {
+      console.log("Found user data in local storage");
       const userData = JSON.parse(storedUser);
       // Convert plain object to UserImpl instance
       const user = new UserImpl(userData);
       setUser(user);
       resetSessionTimeout();
+    } else {
+      console.log("No user data found in local storage");
+      setUser(null);
     }
   } catch (err) {
     console.error("Error checking local storage:", err);
+    setUser(null);
   }
 };

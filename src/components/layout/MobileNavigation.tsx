@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Calendar, BookOpen, Home, Search, User, LayoutGrid } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 

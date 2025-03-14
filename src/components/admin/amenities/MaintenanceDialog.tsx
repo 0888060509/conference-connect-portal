@@ -23,7 +23,7 @@ import {
 import { Amenity } from "@/types/amenities";
 import { addMaintenanceRecord, updateAmenityStatus } from "@/services/AmenityService";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { Settings, Calendar } from "lucide-react";
 
 interface MaintenanceDialogProps {
@@ -55,7 +55,7 @@ export function MaintenanceDialog({
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
     defaultValues: {
       date: new Date().toISOString().split('T')[0],
-      performedBy: user?.name || user?.email || "",
+      performedBy: user ? user.name : "",
       notes: "",
       scheduleNext: false,
       changeStatus: true,

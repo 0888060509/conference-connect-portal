@@ -22,7 +22,7 @@ import {
 import { Amenity } from "@/services/amenities";
 import { createAmenityIssue, updateAmenityStatus } from "@/services/amenities";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/auth";
 import { AlertCircle } from "lucide-react";
 
 interface IssueDialogProps {

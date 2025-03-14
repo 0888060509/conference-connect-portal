@@ -1,6 +1,15 @@
 
-import { User } from "../types";
+import { User, UserImpl } from "../types";
 import { supabase } from "@/integrations/supabase/client";
+
+// Define the session timeout duration (30 minutes)
+const SESSION_TIMEOUT_DURATION = 30 * 60 * 1000;
+
+// Helper function to set a session timeout
+export const setSessionTimeout = (logoutCallback: () => void): NodeJS.Timeout => {
+  console.log("Setting session timeout");
+  return setTimeout(logoutCallback, SESSION_TIMEOUT_DURATION);
+};
 
 export const initializeAuthState = async (
   setUser: (user: User | null) => void,
@@ -20,7 +29,7 @@ export const initializeAuthState = async (
         .single();
       
       if (userData) {
-        const user: User = {
+        const user = new UserImpl({
           id: userData.id,
           email: userData.email,
           first_name: userData.first_name || '',
@@ -29,8 +38,8 @@ export const initializeAuthState = async (
           department: userData.department,
           created_at: userData.created_at,
           last_login: userData.last_login,
-          preferences: userData.preferences
-        };
+          preferences: userData.preferences ? userData.preferences : {}
+        });
         
         setUser(user);
         resetSessionTimeout();
@@ -67,7 +76,7 @@ export const setupAuthStateChangeListener = (
         .single();
       
       if (userData) {
-        const user: User = {
+        const user = new UserImpl({
           id: userData.id,
           email: userData.email,
           first_name: userData.first_name || '',
@@ -76,8 +85,8 @@ export const setupAuthStateChangeListener = (
           department: userData.department,
           created_at: userData.created_at,
           last_login: userData.last_login,
-          preferences: userData.preferences
-        };
+          preferences: userData.preferences ? userData.preferences : {}
+        });
         
         setUser(user);
         resetSessionTimeout();
@@ -102,7 +111,7 @@ export const handleExternalAuthUser = async (
       .single();
     
     if (userData) {
-      const appUser: User = {
+      const appUser = new UserImpl({
         id: userData.id,
         email: userData.email,
         first_name: userData.first_name || '',
@@ -111,8 +120,8 @@ export const handleExternalAuthUser = async (
         department: userData.department,
         created_at: userData.created_at,
         last_login: userData.last_login,
-        preferences: userData.preferences
-      };
+        preferences: userData.preferences ? userData.preferences : {}
+      });
       
       setUser(appUser);
       resetSessionTimeout();
@@ -130,7 +139,9 @@ const checkLocalStorage = (
   try {
     const storedUser = localStorage.getItem("meetingmaster_user");
     if (storedUser) {
-      const user = JSON.parse(storedUser) as User;
+      const userData = JSON.parse(storedUser);
+      // Convert plain object to UserImpl instance
+      const user = new UserImpl(userData);
       setUser(user);
       resetSessionTimeout();
     }

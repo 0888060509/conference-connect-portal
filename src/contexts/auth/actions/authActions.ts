@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User, MOCK_USERS } from "../types";
+import { User, MOCK_USERS, UserImpl } from "../types";
 import { handleExternalAuthUser } from "../utils/sessionUtils";
 
 export const loginWithCredentials = async (
@@ -32,7 +32,7 @@ export const loginWithCredentials = async (
         .single();
       
       if (userData) {
-        const user: User = {
+        const user = new UserImpl({
           id: userData.id,
           email: userData.email,
           first_name: userData.first_name || '',
@@ -41,8 +41,8 @@ export const loginWithCredentials = async (
           department: userData.department,
           created_at: userData.created_at,
           last_login: userData.last_login,
-          preferences: userData.preferences
-        };
+          preferences: userData.preferences ? userData.preferences : {}
+        });
         
         setUser(user);
         

@@ -1,10 +1,10 @@
-
-import { User, UserRole } from "@/contexts/AuthContext";
+import { User, UserRole, UserImpl } from "@/contexts/auth/types";
 
 export interface DirectoryUser {
   id: string;
   email: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   department: string;
   position: string;
   employeeId?: string;
@@ -28,7 +28,8 @@ const MOCK_DIRECTORY_USERS: DirectoryUser[] = [
   {
     id: "dir_1",
     email: "john.smith@company.com",
-    name: "John Smith",
+    first_name: "John",
+    last_name: "Smith",
     department: "Engineering",
     position: "Senior Developer",
     employeeId: "EMP001",
@@ -41,7 +42,8 @@ const MOCK_DIRECTORY_USERS: DirectoryUser[] = [
   {
     id: "dir_2",
     email: "jane.doe@company.com",
-    name: "Jane Doe",
+    first_name: "Jane",
+    last_name: "Doe",
     department: "Engineering",
     position: "Engineering Manager",
     employeeId: "EMP002",
@@ -54,7 +56,8 @@ const MOCK_DIRECTORY_USERS: DirectoryUser[] = [
   {
     id: "dir_3",
     email: "alex.williams@company.com",
-    name: "Alex Williams",
+    first_name: "Alex",
+    last_name: "Williams",
     department: "Executive",
     position: "CTO",
     employeeId: "EMP003",
@@ -66,7 +69,8 @@ const MOCK_DIRECTORY_USERS: DirectoryUser[] = [
   {
     id: "dir_4",
     email: "sarah.johnson@company.com",
-    name: "Sarah Johnson",
+    first_name: "Sarah",
+    last_name: "Johnson",
     department: "Marketing",
     position: "Marketing Director",
     employeeId: "EMP004",
@@ -79,7 +83,8 @@ const MOCK_DIRECTORY_USERS: DirectoryUser[] = [
   {
     id: "dir_5",
     email: "michael.brown@company.com",
-    name: "Michael Brown",
+    first_name: "Michael",
+    last_name: "Brown",
     department: "Sales",
     position: "Sales Manager",
     employeeId: "EMP005",
@@ -153,14 +158,14 @@ export const fetchDepartments = async (): Promise<Department[]> => {
 
 // Convert directory user to application user
 export const convertDirectoryUserToAppUser = (directoryUser: DirectoryUser): User => {
-  return {
+  return new UserImpl({
     id: directoryUser.id,
     email: directoryUser.email,
-    name: directoryUser.name,
+    first_name: directoryUser.first_name,
+    last_name: directoryUser.last_name,
     role: directoryUser.department === "Executive" ? "admin" : "user",
     department: directoryUser.department,
-    position: directoryUser.position,
-  };
+  });
 };
 
 // Sync users from directory
@@ -198,14 +203,14 @@ export const authenticateWithGoogle = async (token: string): Promise<User | null
   await new Promise(resolve => setTimeout(resolve, 800));
   
   // Simulate a successful authentication
-  return {
+  return new UserImpl({
     id: "google_1",
     email: "user@company.com",
-    name: "Company User",
+    first_name: "Company",
+    last_name: "User",
     role: "user",
     department: "Marketing",
-    position: "Marketing Specialist",
-  };
+  });
 };
 
 // Check if email domain is allowed for SSO

@@ -60,7 +60,7 @@ export function Header({ isSidebarCollapsed, toggleSidebar, title }: HeaderProps
                 <Button variant="ghost" size="sm" className="h-8 gap-1">
                   <Avatar className="h-6 w-6">
                     <AvatarImage 
-                      src={`https://ui-avatars.com/api/?name=${user.name}&background=random`} 
+                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`} 
                       alt={user.name} 
                     />
                     <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>

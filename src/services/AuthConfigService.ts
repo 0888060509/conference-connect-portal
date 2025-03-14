@@ -31,7 +31,7 @@ export interface OAuthProviders {
 export interface EmailTemplate {
   subject: string;
   content_html: string;
-  custom_template?: boolean;
+  custom_template: boolean;
   html_content?: string;
 }
 

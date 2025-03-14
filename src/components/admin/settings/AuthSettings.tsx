@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -62,19 +63,19 @@ export function AuthSettings() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplates>({
     verification: {
       subject: 'Verify your email',
-      content_html: '',
+      content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>',
       custom_template: false,
       html_content: ''
     },
     password_reset: {
       subject: 'Reset your password',
-      content_html: '',
+      content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>',
       custom_template: false,
       html_content: ''
     },
     magic_link: {
       subject: 'Your magic link',
-      content_html: '',
+      content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>',
       custom_template: false,
       html_content: ''
     }
@@ -598,10 +599,10 @@ export function AuthSettings() {
                         html_content: e.target.value
                       }
                     })}
-                    placeholder="<html><body><h1>Verify your email</h1><p>Click the link below to verify your email address:</p><p>{"{{ .ConfirmationURL }}"}</p></body></html>"
+                    placeholder={`<html><body><h1>Verify your email</h1><p>Click the link below to verify your email address:</p><p>{{ .ConfirmationURL }}</p></body></html>`}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Use {"{{ .ConfirmationURL }}"} to insert the verification link.
+                    Use {`{{ .ConfirmationURL }}`} to insert the verification link.
                   </p>
                 </div>
               )}
@@ -660,10 +661,10 @@ export function AuthSettings() {
                         html_content: e.target.value
                       }
                     })}
-                    placeholder="<html><body><h1>Reset your password</h1><p>Click the link below to reset your password:</p><p>{"{{ .ConfirmationURL }}"}</p></body></html>"
+                    placeholder={`<html><body><h1>Reset your password</h1><p>Click the link below to reset your password:</p><p>{{ .ConfirmationURL }}</p></body></html>`}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Use {"{{ .ConfirmationURL }}"} to insert the password reset link.
+                    Use {`{{ .ConfirmationURL }}`} to insert the password reset link.
                   </p>
                 </div>
               )}
@@ -722,10 +723,10 @@ export function AuthSettings() {
                         html_content: e.target.value
                       }
                     })}
-                    placeholder="<html><body><h1>Sign in to your account</h1><p>Click the link below to sign in to your account:</p><p>{"{{ .ConfirmationURL }}"}</p></body></html>"
+                    placeholder={`<html><body><h1>Sign in to your account</h1><p>Click the link below to sign in to your account:</p><p>{{ .ConfirmationURL }}</p></body></html>`}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Use {"{{ .ConfirmationURL }}"} to insert the magic link.
+                    Use {`{{ .ConfirmationURL }}`} to insert the magic link.
                   </p>
                 </div>
               )}

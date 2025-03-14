@@ -2,6 +2,7 @@
 import { supabaseClient } from '@/lib/supabase-client';
 import { offlineStore } from '@/lib/offline-store';
 import { toast } from 'sonner';
+import { Booking } from '@/hooks/use-bookings';
 
 /**
  * Sync essential data for offline use
@@ -36,7 +37,15 @@ export async function syncDataForOffline(): Promise<void> {
       .lte('end_time', futureDate.toISOString());
       
     if (bookingsError) throw bookingsError;
-    if (bookings) await offlineStore.storeBookings(bookings);
+    if (bookings) {
+      // Convert database status to our local status type
+      const adaptedBookings = bookings.map(booking => ({
+        ...booking,
+        status: booking.status === 'completed' ? 'confirmed' : booking.status
+      })) as unknown as Booking[];
+      
+      await offlineStore.storeBookings(adaptedBookings);
+    }
     
     console.log('Data synchronized for offline use');
   } catch (error) {

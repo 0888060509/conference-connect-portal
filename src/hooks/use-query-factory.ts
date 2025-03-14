@@ -11,10 +11,9 @@ type MutationFn<T, V> = (variables: V) => Promise<T>;
  * Creates a hook for querying data with proper caching, loading states, and error handling
  */
 export function createQueryHook<T>(
-  queryKey: string | string[],
+  queryKey: string | (string | unknown)[],
   queryFn: QueryFn<T>,
   options: {
-    cacheTime?: number;
     staleTime?: number;
     refetchOnWindowFocus?: boolean;
     enabled?: boolean;
@@ -22,8 +21,8 @@ export function createQueryHook<T>(
 ) {
   return (customOptions: Partial<UseQueryOptions<T, Error>> = {}) => {
     const defaultOptions = {
-      cacheTime: 5 * 60 * 1000, // 5 minutes
-      staleTime: 2 * 60 * 1000, // 2 minutes
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
       refetchOnWindowFocus: true,
       enabled: true,
       retry: 2,
@@ -36,7 +35,7 @@ export function createQueryHook<T>(
         try {
           return await retryOperation(queryFn);
         } catch (error) {
-          handleSupabaseError(error as Error, `Failed to fetch ${queryKey} data`);
+          handleSupabaseError(error as Error, `Failed to fetch ${Array.isArray(queryKey) ? queryKey[0] : queryKey} data`);
           throw error;
         }
       },
@@ -50,12 +49,12 @@ export function createQueryHook<T>(
  * Creates a hook for mutations with optimistic updates
  */
 export function createMutationHook<T, V>(
-  queryKey: string | string[],
+  queryKey: string | (string | ((variables: any) => any))[],
   mutationFn: MutationFn<T, V>,
   options: {
     optimisticUpdate?: (variables: V, oldData: any) => any;
     onSuccessMessage?: string;
-    invalidateQueries?: string[];
+    invalidateQueries?: (string | (string | ((variables: any) => any))[])[]; 
   } = {}
 ) {
   return (

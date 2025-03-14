@@ -1,135 +1,89 @@
 
 import { useEffect } from 'react';
-import { RealtimeChannel, RealtimePostgresChangesPayload, REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabaseClient } from '@/lib/supabase-client';
+import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
-
-interface UseRealtimeOptions {
-  schema?: string;
+type RealtimeOptions = {
   table: string;
-  event?: EventType;
   filter?: string;
   onError?: (error: Error) => void;
-}
+};
 
 /**
- * Hook for subscribing to Supabase Realtime changes
- * 
- * @param callback Function called when a matching change occurs
- * @param options Configuration options for the subscription
- * @returns A cleanup function that unsubscribes from the channel
- * 
- * @example
- * ```tsx
- * useRealtime((payload) => {
- *   console.log('New booking:', payload.new);
- * }, {
- *   table: 'bookings',
- *   event: 'INSERT',
- *   filter: 'room_id=eq.123',
- * });
- * ```
+ * Hook to subscribe to real-time changes for a specific table
  */
-export function useRealtime<T = any>(
+export function useRealtime<T>(
   callback: (payload: RealtimePostgresChangesPayload<T>) => void,
-  options: UseRealtimeOptions
+  options: RealtimeOptions
 ) {
-  const { schema = 'public', table, event = '*', filter, onError } = options;
-
   useEffect(() => {
-    // Create a unique channel name
-    const channelName = `${schema}:${table}:${event}${filter ? `:${filter}` : ''}`;
-    
-    // Configure channel
-    let channel: RealtimeChannel;
-    
-    try {
-      channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes' as any, // Type assertion to bypass the type error
-          {
-            event,
-            schema,
-            table,
-            filter,
-          }, 
+    let channel: RealtimeChannel | null = null;
+
+    const subscribe = async () => {
+      try {
+        const { table, filter } = options;
+        
+        channel = supabaseClient
+          .channel(`table-changes-${table}-${filter || 'all'}`)
+          
+        if (filter) {
+          channel = channel.on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table,
+              filter: filter,
+            },
+            (payload) => {
+              callback(payload as RealtimePostgresChangesPayload<T>);
+            }
+          );
+        } else {
+          channel = channel.on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table,
+            },
+            (payload) => {
+              callback(payload as RealtimePostgresChangesPayload<T>);
+            }
+          );
+        }
+        
+        // Subscribe to broadcast messages as well (for system-wide notifications)
+        channel = channel.on(
+          'broadcast',
+          { event: `${table}-change` },
           (payload) => {
-            // Double type assertion to safely convert the payload to the expected type
+            // Type assertion to safely handle the broadcast payload
             callback(payload as unknown as RealtimePostgresChangesPayload<T>);
           }
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIPTION_ERROR' as any && onError) {
-            onError(new Error(`Subscription error for ${channelName}`));
+        );
+        
+        // Start the subscription
+        channel.subscribe((status) => {
+          if (status !== 'SUBSCRIBED') {
+            console.warn(`Realtime subscription status: ${status}`);
           }
         });
-    } catch (err) {
-      if (onError) {
-        onError(err instanceof Error ? err : new Error('Unknown error in Realtime subscription'));
+      } catch (error) {
+        console.error('Error setting up realtime subscription:', error);
+        if (options.onError) {
+          options.onError(error as Error);
+        }
       }
-      return;
-    }
-    
-    // Cleanup
-    return () => {
-      supabase.removeChannel(channel);
     };
-  }, [schema, table, event, filter, callback, onError]);
-}
 
-/**
- * Hook for tracking user presence in a channel
- * 
- * @param channelName Unique name for the presence channel
- * @param presenceData Data to share with other clients
- * @param callbacks Optional presence event callbacks
- * @returns Current presence state and a function to update presence
- */
-export function usePresence<T extends Record<string, any>>(
-  channelName: string,
-  presenceData: T,
-  callbacks?: {
-    onSync?: (state: Record<string, T[]>) => void;
-    onJoin?: (key: string, newPresences: T[]) => void;
-    onLeave?: (key: string, leftPresences: T[]) => void;
-  }
-) {
-  useEffect(() => {
-    // Set up presence channel
-    const channel = supabase.channel(channelName);
-    
-    // Configure presence handlers
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        if (callbacks?.onSync) {
-          // Type assertion to handle the state correctly
-          callbacks.onSync(state as unknown as Record<string, T[]>);
-        }
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        if (callbacks?.onJoin) {
-          // Type assertion to handle the presences correctly
-          callbacks.onJoin(key, newPresences as unknown as T[]);
-        }
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        if (callbacks?.onLeave) {
-          // Type assertion to handle the presences correctly
-          callbacks.onLeave(key, leftPresences as unknown as T[]);
-        }
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track(presenceData);
-        }
-      });
-      
-    // Cleanup
+    subscribe();
+
+    // Clean up subscription
     return () => {
-      supabase.removeChannel(channel);
+      if (channel) {
+        channel.unsubscribe();
+      }
     };
-  }, [channelName, presenceData, callbacks]);
+  }, [callback, options.table, options.filter]);
 }

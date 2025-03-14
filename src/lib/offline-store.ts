@@ -2,6 +2,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
+import { supabaseClient } from '@/lib/supabase-client';
 
 interface MeetingMasterDB extends DBSchema {
   rooms: {
@@ -17,7 +18,7 @@ interface MeetingMasterDB extends DBSchema {
   pendingOperations: {
     key: number;
     value: {
-      id: number;
+      id?: number;
       timestamp: number;
       operation: 'insert' | 'update' | 'delete';
       table: string;
@@ -110,19 +111,20 @@ export const offlineStore = {
   async addPendingOperation(operation: 'insert' | 'update' | 'delete', table: string, data: any): Promise<number> {
     const db = await initDB();
     const tx = db.transaction('pendingOperations', 'readwrite');
-    const id = await tx.store.add({
+    const pendingOperation = {
       timestamp: Date.now(),
       operation,
       table,
       data,
       processed: false
-    });
+    };
+    const id = await tx.store.add(pendingOperation);
     await tx.done;
     return id;
   },
   
   async getPendingOperations(): Promise<{ 
-    id: number;
+    id?: number;
     timestamp: number;
     operation: 'insert' | 'update' | 'delete';
     table: string;
@@ -196,7 +198,9 @@ export const syncPendingOperations = async (): Promise<void> => {
       }
       
       // Mark operation as processed
-      await offlineStore.markOperationProcessed(op.id);
+      if (op.id) {
+        await offlineStore.markOperationProcessed(op.id);
+      }
     } catch (error) {
       console.error('Failed to sync operation:', op, error);
       // Don't mark as processed on error to retry later

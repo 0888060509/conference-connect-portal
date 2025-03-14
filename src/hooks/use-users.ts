@@ -68,7 +68,7 @@ export function useUsers(options: {
     ...createQueryHook<User[]>(
       ['users', options],
       queryFn,
-      { enabled: !!currentUser?.role === 'admin' } // Only admin can list all users
+      { enabled: currentUser?.role === 'admin' } // Only admin can list all users
     )(),
     totalCount,
     pagination: {
@@ -139,7 +139,7 @@ export function useUpdateUserProfile() {
     mutationFn,
     {
       onSuccessMessage: 'Profile updated successfully',
-      invalidateQueries: ['users', ['user', (variables) => variables.id]]
+      invalidateQueries: [['users'], ['user', (variables: any) => variables.id]]
     }
   )();
 }
@@ -172,7 +172,7 @@ export function useUpdateUserPreferences() {
     mutationFn,
     {
       onSuccessMessage: 'Preferences updated successfully',
-      invalidateQueries: [['user', (variables) => variables.id]]
+      invalidateQueries: [['user', (variables: any) => variables.id]]
     }
   )();
 }

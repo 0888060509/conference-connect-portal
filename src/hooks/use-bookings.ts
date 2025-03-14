@@ -12,7 +12,7 @@ export type Booking = {
   room_id: string;
   start_time: string;
   end_time: string;
-  status: 'confirmed' | 'pending' | 'cancelled';
+  status: 'confirmed' | 'cancelled' | 'completed';
   recurring_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -32,7 +32,7 @@ export type BookingWithRoom = Booking & {
  * Hook for fetching all bookings with optional filtering
  */
 export function useBookings(options: {
-  status?: 'confirmed' | 'pending' | 'cancelled';
+  status?: 'confirmed' | 'cancelled' | 'completed';
   roomId?: string;
   userId?: string;
   startDate?: string;
@@ -135,7 +135,7 @@ export function useUserBookings(userId?: string) {
   
   // Set up real-time subscription for user's bookings
   useRealtime<Booking>((payload) => {
-    if (payload.new.user_id === userId) {
+    if (payload.new && 'user_id' in payload.new && payload.new.user_id === userId) {
       bookingsQuery.refetch();
     }
   }, {
@@ -178,7 +178,16 @@ export function useCreateBooking() {
   const mutationFn = async (newBooking: Omit<Booking, 'id' | 'created_at' | 'updated_at'>) => {
     const { data, error } = await supabaseClient
       .from('bookings')
-      .insert(newBooking)
+      .insert({
+        title: newBooking.title,
+        description: newBooking.description,
+        user_id: newBooking.user_id,
+        room_id: newBooking.room_id,
+        start_time: newBooking.start_time,
+        end_time: newBooking.end_time,
+        status: newBooking.status,
+        recurring_id: newBooking.recurring_id
+      })
       .select('*, room:room_id(id, name, building, floor, number)')
       .single();
     
@@ -203,7 +212,16 @@ export function useUpdateBooking() {
   const mutationFn = async ({ id, ...updates }: Partial<Booking> & { id: string }) => {
     const { data, error } = await supabaseClient
       .from('bookings')
-      .update(updates)
+      .update({
+        title: updates.title,
+        description: updates.description,
+        user_id: updates.user_id,
+        room_id: updates.room_id,
+        start_time: updates.start_time,
+        end_time: updates.end_time,
+        status: updates.status,
+        recurring_id: updates.recurring_id
+      })
       .eq('id', id)
       .select('*, room:room_id(id, name, building, floor, number)')
       .single();
@@ -217,7 +235,7 @@ export function useUpdateBooking() {
     mutationFn,
     {
       onSuccessMessage: 'Booking updated successfully',
-      invalidateQueries: ['bookings', 'userBookings', ['booking', updates => updates.id]],
+      invalidateQueries: [['bookings'], ['userBookings'], ['booking', (updates: any) => updates.id]],
       optimisticUpdate: (variables, oldData: BookingWithRoom[] | undefined) => {
         if (!oldData) return [];
         return oldData.map(booking => 
@@ -249,7 +267,7 @@ export function useCancelBooking() {
     mutationFn,
     {
       onSuccessMessage: 'Booking cancelled successfully',
-      invalidateQueries: ['bookings', 'userBookings', ['booking']],
+      invalidateQueries: [['bookings'], ['userBookings'], ['booking']],
       optimisticUpdate: (id, oldData: BookingWithRoom[] | undefined) => {
         if (!oldData) return [];
         return oldData.map(booking => 

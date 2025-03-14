@@ -13,13 +13,6 @@ interface PendingOperation {
   processed: boolean;
 }
 
-// Define a custom interface for the pending operations store
-interface PendingOperationsStore {
-  key: number;
-  value: PendingOperation;
-  indexes: { 'by-processed': boolean };
-}
-
 // Define the schema structure for the database
 interface MeetingMasterDB extends DBSchema {
   rooms: {
@@ -32,7 +25,11 @@ interface MeetingMasterDB extends DBSchema {
     value: Booking;
     indexes: { 'by-user': string; 'by-room': string; 'by-start-date': string };
   };
-  pendingOperations: PendingOperationsStore;
+  pendingOperations: {
+    key: number;
+    value: PendingOperation;
+    indexes: { 'by-processed': boolean };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<MeetingMasterDB>> | null = null;

@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Define user roles
 export type UserRole = "user" | "admin";
@@ -21,6 +22,7 @@ interface AuthContextType {
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
   logout: () => void;
   resetPassword: (email: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   error: string | null;
   clearError: () => void;
 }
@@ -73,6 +75,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.removeItem("meetingmaster_session_expiry");
           }
         }
+        
+        // Check for Supabase session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          handleExternalAuthUser(session.user);
+        }
       } catch (e) {
         console.error("Auth initialization error:", e);
       } finally {
@@ -81,9 +89,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          handleExternalAuthUser(session.user);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          localStorage.removeItem("meetingmaster_user");
+          localStorage.removeItem("meetingmaster_session_expiry");
+        }
+      }
+    );
+    
     // Simulate network delay to make loading state visible
     setTimeout(checkAuth, 1000);
+    
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
+
+  // Handle external auth user (Google, etc)
+  const handleExternalAuthUser = async (authUser: any) => {
+    try {
+      // For demo, create a mock user based on the external auth
+      // In a real app, you would fetch the user profile from your database
+      const newUser: User = {
+        id: authUser.id,
+        email: authUser.email || "",
+        name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || "User",
+        role: "user", // Default role for new users
+      };
+      
+      setUser(newUser);
+      
+      // Store user if remember me is checked (for this demo, we always remember external auth)
+      localStorage.setItem("meetingmaster_user", JSON.stringify(newUser));
+      
+      // Set session expiry
+      resetSessionTimeout();
+    } catch (err) {
+      console.error("Error handling external auth user:", err);
+    }
+  };
 
   // Set up activity listeners to reset session timeout
   useEffect(() => {
@@ -126,6 +175,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
+      // First try Supabase auth
+      const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (data.user) {
+        // Supabase auth successful, user will be set by the auth state change listener
+        return;
+      }
+      
+      // If Supabase auth fails, try mock authentication for demo purposes
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -147,12 +208,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Sign out from Supabase
+    await supabase.auth.signOut();
+    
+    // Clear local user state
     setUser(null);
     
     // Clear session timeout
@@ -171,17 +237,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Try Supabase password reset
+      const { error: supabaseError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
       
+      if (supabaseError) {
+        throw supabaseError;
+      }
+      
+      // For demo purposes, also check mock users
       const foundUser = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
       
       if (!foundUser) {
-        throw new Error("No account found with this email address");
+        // We don't throw an error here to prevent user enumeration
+        console.log(`Password reset requested for ${email} (not in mock users)`);
+      } else {
+        console.log(`Password reset requested for ${email} (mock user)`);
       }
-      
-      // In a real app, this would send a reset email
-      console.log(`Password reset requested for ${email}`);
       
       return Promise.resolve();
     } catch (err) {
@@ -189,6 +262,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return Promise.reject(err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      setError(null);
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed");
+      throw err;
     }
   };
 
@@ -201,6 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     resetPassword,
+    signInWithGoogle,
     error,
     clearError
   };

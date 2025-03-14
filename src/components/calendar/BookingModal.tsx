@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -21,6 +20,8 @@ import {
   canOverrideBooking
 } from "@/services/conflictResolutionService";
 import { useNotifications } from "@/contexts/NotificationContext";
+import { useCreateBooking, useUserSearch } from "@/hooks/use-calendar-backend";
+import { useAuth } from "@/contexts/auth";
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -93,14 +94,31 @@ export function BookingModal({
   
   const { sendNotification } = useNotifications();
 
-  const timeOptions = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"
-  ];
+  // Integration with backend hooks
+  const { user } = useAuth();
+  const createBookingMutation = useCreateBooking();
+  const userSearchQuery = useUserSearch(attendees.split(',').pop()?.trim() || '');
+  
+  // Format attendee IDs for backend
+  const getAttendeeIds = (): string[] => {
+    return attendees.split(',')
+      .map(email => email.trim())
+      .filter(Boolean)
+      .map(email => {
+        // In a real app, you would look up user IDs by email
+        // For now, just return placeholder IDs
+        return `user-${email}`;
+      });
+  };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user?.id) {
+      toast.error('You must be logged in to create a booking');
+      return;
+    }
     
     // Convert start and end times to Date objects
     const [startHour, startMinute] = selectedStartTime.split(":").map(Number);
@@ -112,74 +130,52 @@ export function BookingModal({
     const endDate = new Date(date);
     endDate.setHours(endHour, endMinute, 0, 0);
     
-    // Create booking object
-    const newBooking: Booking = {
-      id: `booking-${Date.now()}`,
-      roomId: room.id.toString(),
+    // Create booking with backend
+    const result = await createBookingMutation.mutateAsync({
       title: bookingTitle,
-      start: startDate,
-      end: endDate,
-      userId: "current-user", // In a real app, get from auth context
-      priority: priority,
-      isRecurring: isRecurring
-    };
-    
-    // Check for conflicts with existing bookings
-    const conflicts = checkBookingConflicts(newBooking, mockBookings);
-    
-    if (conflicts.length > 0) {
-      // Get the first conflicting booking
-      const conflict = conflicts[0];
-      
-      // Generate alternative suggestions
-      const timeAlternatives = generateTimeSuggestions(newBooking, mockBookings, room.id.toString());
-      const roomAlternatives = generateRoomSuggestions(newBooking, mockRooms, mockBookings);
-      
-      // Check if this booking can override the existing one
-      const canOverrideExisting = canOverrideBooking(newBooking, conflict);
-      
-      // Set conflict resolution state
-      setConflictedBooking(newBooking);
-      setExistingBooking(conflict);
-      setTimeSuggestions(timeAlternatives);
-      setRoomSuggestions(roomAlternatives);
-      setCanOverride(canOverrideExisting);
-      
-      // Open conflict resolution dialog
-      setIsConflictDialogOpen(true);
-      
-      return;
-    }
-    
-    // If no conflicts, proceed with booking
-    completeBooking(newBooking);
-  };
-
-  const completeBooking = (booking: Booking) => {
-    // Handle booking submission logic here
-    console.log({
-      roomId: booking.roomId,
-      date: format(booking.start, "yyyy-MM-dd"),
-      startTime: format(booking.start, "HH:mm"),
-      endTime: format(booking.end, "HH:mm"),
-      title: booking.title,
       description: bookingDescription,
-      attendees: attendees.split(",").map(a => a.trim()),
-      isRecurring,
-      recurrencePattern,
-      priority: booking.priority
+      roomId: room.id.toString(),
+      startTime: startDate,
+      endTime: endDate,
+      recurring: isRecurring ? recurrencePattern! : undefined,
+      attendees: getAttendeeIds()
     });
     
-    // Show success notification
-    sendNotification(
-      "booking_confirmation",
-      "Booking Confirmed",
-      `Your booking for ${room.name} has been confirmed.`,
-      ["in_app", "email"]
-    );
-    
-    // Close the modal
-    onClose();
+    if (result.success) {
+      onClose();
+    } else if (result.conflicts && result.conflicts.length > 0) {
+      // Handle conflicts using the ConflictResolutionDialog
+      const conflictedBooking = {
+        id: 'new-booking',
+        roomId: room.id.toString(),
+        title: bookingTitle,
+        start: startDate,
+        end: endDate,
+        userId: user.id,
+        priority: priority
+      };
+      
+      setConflictedBooking(conflictedBooking);
+      setExistingBooking(result.conflicts[0]);
+      
+      // Generate suggestions (this would come from the backend in a real app)
+      setTimeSuggestions([
+        { startTime: '10:00', endTime: '11:00', roomId: room.id.toString(), roomName: room.name },
+        { startTime: '11:00', endTime: '12:00', roomId: room.id.toString(), roomName: room.name },
+        { startTime: '14:00', endTime: '15:00', roomId: room.id.toString(), roomName: room.name }
+      ]);
+      
+      setRoomSuggestions([
+        { startTime: selectedStartTime, endTime: selectedEndTime, roomId: '2', roomName: 'Conference Room Alpha' },
+        { startTime: selectedStartTime, endTime: selectedEndTime, roomId: '3', roomName: 'Small Meeting Room' }
+      ]);
+      
+      // Set whether this booking can override based on priority
+      setCanOverride(priority === 'high' || priority === 'critical');
+      
+      // Open conflict dialog
+      setIsConflictDialogOpen(true);
+    }
   };
 
   const handleRecurrencePatternChange = (pattern: RecurrencePattern) => {
@@ -188,10 +184,8 @@ export function BookingModal({
 
   const handleConflictResolutionComplete = () => {
     // This would handle the result of conflict resolution
-    // For demo purposes, we'll just close the dialog
     setIsConflictDialogOpen(false);
     
-    // In a real app, you would take different actions based on the resolution
     sendNotification(
       "booking_modification",
       "Conflict Resolved",

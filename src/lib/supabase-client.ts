@@ -1,13 +1,15 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+
+// Import the Supabase client from the integrations folder
+import { supabase } from '@/integrations/supabase/client';
 
 // Create supabase client using the imported one's URL and key
 export const supabaseClient = createClient<Database>(
-  supabase.getUrl(),
-  supabase.getPublicKey(),
+  supabase.url.toString(),
+  supabase.publicKey || '',
   {
     auth: {
       persistSession: true,

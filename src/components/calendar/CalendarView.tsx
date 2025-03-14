@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { format, addMonths, subMonths, addDays, subDays, addWeeks, subWeeks, isSameDay } from "date-fns";
+import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, isSameDay } from "date-fns";
 import { 
   Calendar as CalendarIcon, 
   ChevronLeft, 
@@ -30,6 +30,11 @@ import { DateSelector } from "@/components/calendar/DateSelector";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BookingModal } from "@/components/calendar/BookingModal";
 import { SwipeableCalendarView } from "@/components/calendar/SwipeableCalendarView";
+import { useAuth } from "@/contexts/auth";
+import { useRoomAvailability } from "@/hooks/use-calendar-backend";
+import { useRealtimeCalendarUpdates } from "@/hooks/use-calendar-backend";
+import { useBookingDragDrop } from "@/hooks/use-calendar-backend";
+import { toast } from "sonner";
 
 const rooms = [
   {
@@ -110,10 +115,45 @@ export function CalendarView() {
     }
   };
 
+  const { user } = useAuth();
+  const availabilityQuery = useRoomAvailability(
+    rooms.map(room => room.id.toString()),
+    currentDate
+  );
+  
+  useRealtimeCalendarUpdates(() => {
+    availabilityQuery.refetch();
+  });
+  
+  const { 
+    updateBookingTime, 
+    isUpdating, 
+    isDragging 
+  } = useBookingDragDrop();
+
   const handleRoomSelect = (room: any, date: Date, startTime?: string, endTime?: string) => {
+    if (!user) {
+      toast.error('You must be logged in to book a room');
+      return;
+    }
+    
     setSelectedRoom(room);
     setSelectedSlot({ date, startTime, endTime });
     setBookingModalOpen(true);
+  };
+  
+  const handleBookingMove = (bookingId: string, newStart: Date, newEnd: Date, newRoomId?: string) => {
+    if (!user) {
+      toast.error('You must be logged in to update a booking');
+      return;
+    }
+    
+    updateBookingTime({
+      bookingId,
+      startTime: newStart,
+      endTime: newEnd,
+      roomId: newRoomId
+    });
   };
 
   const getViewTitle = () => {
@@ -231,6 +271,9 @@ export function CalendarView() {
                 currentDate={currentDate} 
                 rooms={displayRooms} 
                 onSelectRoom={handleRoomSelect}
+                availabilityData={availabilityQuery.data || {}}
+                onMoveBooking={handleBookingMove}
+                isUpdating={isUpdating || isDragging}
               />
             )}
             {selectedView === "week" && (
@@ -238,6 +281,9 @@ export function CalendarView() {
                 currentDate={currentDate} 
                 rooms={displayRooms} 
                 onSelectRoom={handleRoomSelect}
+                availabilityData={availabilityQuery.data || {}}
+                onMoveBooking={handleBookingMove}
+                isUpdating={isUpdating || isDragging}
               />
             )}
             {selectedView === "day" && (
@@ -245,6 +291,9 @@ export function CalendarView() {
                 currentDate={currentDate} 
                 rooms={displayRooms} 
                 onSelectRoom={handleRoomSelect}
+                availabilityData={availabilityQuery.data || {}}
+                onMoveBooking={handleBookingMove}
+                isUpdating={isUpdating || isDragging}
               />
             )}
             {selectedView === "timeline" && (
@@ -252,6 +301,9 @@ export function CalendarView() {
                 currentDate={currentDate} 
                 rooms={displayRooms} 
                 onSelectRoom={handleRoomSelect}
+                availabilityData={availabilityQuery.data || {}}
+                onMoveBooking={handleBookingMove}
+                isUpdating={isUpdating || isDragging}
               />
             )}
           </SwipeableCalendarView>

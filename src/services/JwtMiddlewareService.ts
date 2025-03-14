@@ -30,6 +30,11 @@ class JwtMiddlewareService {
     return this.jwtToken;
   }
   
+  // Check if the user is authenticated
+  isAuthenticated(): boolean {
+    return !!this.jwtToken;
+  }
+  
   // Validate the token and get the claims
   async validateToken(): Promise<JwtClaims | null> {
     if (!this.jwtToken) {
@@ -61,6 +66,16 @@ class JwtMiddlewareService {
         claims.role = userData.role;
       }
       
+      // Get user role assignments
+      const { data: roleAssignments } = await supabase
+        .from('user_role_assignments')
+        .select('role')
+        .eq('user_id', user.id);
+        
+      if (roleAssignments && roleAssignments.length > 0) {
+        claims.roles = roleAssignments.map(assignment => assignment.role);
+      }
+      
       // Get custom JWT claims from mappings
       const { data: customClaims } = await supabase
         .from('jwt_claim_mappings')
@@ -83,10 +98,54 @@ class JwtMiddlewareService {
     }
   }
   
-  // Check if the user has a specific role
+  // Check if the user has a specific role (using the new user_role_assignments table)
   async hasRole(role: string): Promise<boolean> {
-    const claims = await this.validateToken();
-    return claims?.role === role;
+    if (!this.jwtToken) {
+      return false;
+    }
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser(this.jwtToken);
+      
+      if (!user) {
+        return false;
+      }
+      
+      const { data, error } = await supabase.rpc('user_has_role', {
+        user_id: user.id,
+        role_name: role
+      });
+      
+      if (error) {
+        console.error('Error checking user role:', error);
+        return false;
+      }
+      
+      return data || false;
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      return false;
+    }
+  }
+  
+  // Check if user has at least one of the specified roles
+  async hasAnyRole(roles: string[]): Promise<boolean> {
+    for (const role of roles) {
+      if (await this.hasRole(role)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  // Check if user has all of the specified roles
+  async hasAllRoles(roles: string[]): Promise<boolean> {
+    for (const role of roles) {
+      if (!(await this.hasRole(role))) {
+        return false;
+      }
+    }
+    return true;
   }
   
   // Secure fetch that includes the JWT token
@@ -102,6 +161,40 @@ class JwtMiddlewareService {
       ...options,
       headers
     });
+  }
+  
+  // Get user ID from token
+  async getUserId(): Promise<string | null> {
+    const claims = await this.validateToken();
+    return claims?.sub || null;
+  }
+  
+  // Check if a rate limit has been reached
+  async checkRateLimit(endpoint: string, maxRequests: number = 100, windowSeconds: number = 60): Promise<boolean> {
+    const userId = await this.getUserId();
+    
+    if (!userId) {
+      return false;
+    }
+    
+    try {
+      const { data, error } = await supabase.rpc('check_rate_limit', {
+        u_id: userId,
+        endpoint,
+        max_requests: maxRequests,
+        window_seconds: windowSeconds
+      });
+      
+      if (error) {
+        console.error('Error checking rate limit:', error);
+        return false;
+      }
+      
+      return data || false;
+    } catch (error) {
+      console.error('Error checking rate limit:', error);
+      return false;
+    }
   }
 }
 

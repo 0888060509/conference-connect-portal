@@ -678,6 +678,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_booking_conflicts: {
+        Args: {
+          p_room_id: string
+          p_start_time: string
+          p_end_time: string
+          p_booking_id?: string
+        }
+        Returns: {
+          conflicting_booking_id: string
+          title: string
+          start_time: string
+          end_time: string
+          user_id: string
+        }[]
+      }
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean

@@ -1,3 +1,4 @@
+
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';

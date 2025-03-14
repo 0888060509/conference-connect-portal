@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -263,7 +262,7 @@ function WaitlistTable({ waitlist, onApprove, onReject }: WaitlistTableProps) {
                   </td>
                   <td className="p-3">
                     <Badge variant={
-                      item.status === "approved" ? "success" : 
+                      item.status === "approved" ? "default" : 
                       item.status === "rejected" ? "destructive" : 
                       "outline"
                     }>

@@ -24,8 +24,12 @@ export const useOAuthRedirect = ({
     const handleRedirect = async () => {
       // Check if we have a hash parameter from OAuth redirect
       const hashParams = location.hash;
-      if (hashParams && (hashParams.includes('access_token') || hashParams.includes('error'))) {
-        console.log('Auth redirect detected in LoginForm:', hashParams);
+      const queryParams = new URLSearchParams(location.search);
+      
+      if ((hashParams && (hashParams.includes('access_token') || hashParams.includes('error'))) || 
+          queryParams.has('error_description')) {
+        
+        console.log('Auth redirect detected in LoginForm. Hash:', hashParams, 'Query:', location.search);
         setIsGoogleSigningIn(true);
         clearError();
         
@@ -43,8 +47,15 @@ export const useOAuthRedirect = ({
             navigate(from, { replace: true });
           } else {
             console.log('No session found after redirect');
-            setLocalError("Authentication failed: No session found");
-            toast.error("Authentication failed: No session found");
+            
+            if (queryParams.has('error_description')) {
+              const errorDesc = queryParams.get('error_description');
+              setLocalError(`Authentication failed: ${errorDesc}`);
+              toast.error(`Authentication failed: ${errorDesc}`);
+            } else {
+              setLocalError("Authentication failed: No session found");
+              toast.error("Authentication failed: No session found");
+            }
           }
         } catch (err: any) {
           console.error("Error during OAuth redirect handling:", err);

@@ -9,10 +9,14 @@ export const signInWithGoogleAuth = async (
     setIsLoading(true);
     setError(null);
     
+    // Get the current origin for dynamic redirect
+    const redirectUrl = `${window.location.origin}/dashboard`;
+    console.log("Setting Google auth redirect to:", redirectUrl);
+    
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: redirectUrl,
         queryParams: {
           prompt: 'select_account'
         }

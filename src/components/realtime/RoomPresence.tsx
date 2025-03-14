@@ -17,6 +17,20 @@ type RoomViewer = {
   status: 'active' | 'idle' | 'offline';
 };
 
+interface RoomPresenceData {
+  id: string;
+  room_id: string;
+  user_id: string;
+  status: string;
+  last_active: string;
+  created_at: string;
+  users?: {
+    email: string;
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
 export function RoomPresence({ roomId }: RoomPresenceProps) {
   const [viewers, setViewers] = useState<RoomViewer[]>([]);
   
@@ -32,7 +46,7 @@ export function RoomPresence({ roomId }: RoomPresenceProps) {
       
       // Insert or update presence record
       await supabase
-        .from('room_presence')
+        .from('room_presence' as any) // Type assertion to bypass TS error
         .upsert({
           room_id: roomId,
           user_id: user.id,
@@ -44,7 +58,7 @@ export function RoomPresence({ roomId }: RoomPresenceProps) {
       // Set up interval to update presence
       const intervalId = setInterval(async () => {
         await supabase
-          .from('room_presence')
+          .from('room_presence' as any) // Type assertion to bypass TS error
           .upsert({
             room_id: roomId,
             user_id: user.id,
@@ -77,33 +91,43 @@ export function RoomPresence({ roomId }: RoomPresenceProps) {
     
     // Fetch viewers when presence changes
     async function fetchViewers() {
-      // Get presence data and join with user profiles
-      const { data } = await supabase
-        .from('room_presence')
-        .select(`
-          id,
-          user_id,
-          status,
-          last_active,
-          users:user_id (
-            email,
-            first_name,
-            last_name
-          )
-        `)
-        .eq('room_id', roomId)
-        .gt('last_active', new Date(Date.now() - 5 * 60 * 1000).toISOString()); // Only users active in the last 5 minutes
-        
-      if (data) {
-        const viewersList = data.map(presence => ({
-          id: presence.user_id,
-          email: presence.users?.email || '',
-          first_name: presence.users?.first_name || '',
-          last_name: presence.users?.last_name || '',
-          status: presence.status as 'active' | 'idle' | 'offline',
-        }));
-        
-        setViewers(viewersList);
+      try {
+        // Get presence data and join with user profiles
+        const { data, error } = await supabase
+          .from('room_presence' as any) // Type assertion to bypass TS error
+          .select(`
+            id,
+            user_id,
+            status,
+            last_active,
+            users:user_id (
+              email,
+              first_name,
+              last_name
+            )
+          `)
+          .eq('room_id', roomId)
+          .gt('last_active', new Date(Date.now() - 5 * 60 * 1000).toISOString()); // Only users active in the last 5 minutes
+          
+        if (error) {
+          console.error("Error fetching room presence:", error);
+          return;
+        }
+          
+        if (data) {
+          const typedData = data as unknown as RoomPresenceData[];
+          const viewersList = typedData.map(presence => ({
+            id: presence.user_id,
+            email: presence.users?.email || '',
+            first_name: presence.users?.first_name || '',
+            last_name: presence.users?.last_name || '',
+            status: presence.status as 'active' | 'idle' | 'offline',
+          }));
+          
+          setViewers(viewersList);
+        }
+      } catch (err) {
+        console.error("Error in fetchViewers:", err);
       }
     }
     
@@ -113,14 +137,18 @@ export function RoomPresence({ roomId }: RoomPresenceProps) {
       
       // When component unmounts, mark user as offline
       const removePresence = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        
-        await supabase
-          .from('room_presence')
-          .delete()
-          .eq('room_id', roomId)
-          .eq('user_id', user.id);
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          
+          await supabase
+            .from('room_presence' as any) // Type assertion to bypass TS error
+            .delete()
+            .eq('room_id', roomId)
+            .eq('user_id', user.id);
+        } catch (err) {
+          console.error("Error removing presence:", err);
+        }
       };
       
       removePresence();

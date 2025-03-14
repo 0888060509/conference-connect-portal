@@ -377,15 +377,18 @@ class AuthConfigService {
         return {
           verification: {
             subject: 'Verify your email',
-            content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>'
+            content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>',
+            custom_template: false
           },
           password_reset: {
             subject: 'Reset your password',
-            content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>'
+            content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>',
+            custom_template: false
           },
           magic_link: {
             subject: 'Your magic link',
-            content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>'
+            content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>',
+            custom_template: false
           }
         };
       }
@@ -396,15 +399,18 @@ class AuthConfigService {
       return {
         verification: {
           subject: 'Verify your email',
-          content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>'
+          content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>',
+          custom_template: false
         },
         password_reset: {
           subject: 'Reset your password',
-          content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>'
+          content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>',
+          custom_template: false
         },
         magic_link: {
           subject: 'Your magic link',
-          content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>'
+          content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>',
+          custom_template: false
         }
       };
     }

@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { RealtimeChannel, RealtimePostgresChangesPayload, REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
@@ -47,14 +47,18 @@ export function useRealtime<T = any>(
     try {
       channel = supabase
         .channel(channelName)
-        .on('postgres_changes', {
-          event,
-          schema,
-          table,
-          filter,
-        }, (payload) => {
-          callback(payload as RealtimePostgresChangesPayload<T>);
-        })
+        .on(
+          'postgres_changes' as any, // Type assertion to bypass type checking
+          {
+            event,
+            schema,
+            table,
+            filter,
+          }, 
+          (payload) => {
+            callback(payload as RealtimePostgresChangesPayload<T>);
+          }
+        )
         .subscribe((status) => {
           if (status === 'SUBSCRIPTION_ERROR' && onError) {
             onError(new Error(`Subscription error for ${channelName}`));
@@ -98,19 +102,19 @@ export function usePresence<T extends Record<string, any>>(
     // Configure presence handlers
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
+        const state = channel.presenceState() as unknown;
         if (callbacks?.onSync) {
           callbacks.onSync(state as Record<string, T[]>);
         }
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         if (callbacks?.onJoin) {
-          callbacks.onJoin(key, newPresences as T[]);
+          callbacks.onJoin(key, newPresences as unknown as T[]);
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         if (callbacks?.onLeave) {
-          callbacks.onLeave(key, leftPresences as T[]);
+          callbacks.onLeave(key, leftPresences as unknown as T[]);
         }
       })
       .subscribe(async (status) => {

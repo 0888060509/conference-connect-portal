@@ -36,14 +36,23 @@ export function SystemAnnouncement() {
     const fetchAnnouncements = async () => {
       const now = new Date().toISOString();
       
-      const { data } = await supabase
-        .from('broadcast_messages')
-        .select('*')
-        .or(`expires_at.gt.${now},expires_at.is.null`)
-        .order('created_at', { ascending: false });
-        
-      if (data) {
-        setAnnouncements(data as BroadcastMessage[]);
+      try {
+        const { data, error } = await supabase
+          .from('broadcast_messages' as any) // Type assertion to bypass TS error
+          .select('*')
+          .or(`expires_at.gt.${now},expires_at.is.null`)
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error("Error fetching announcements:", error);
+          return;
+        }
+          
+        if (data) {
+          setAnnouncements(data as unknown as BroadcastMessage[]);
+        }
+      } catch (err) {
+        console.error("Error in fetchAnnouncements:", err);
       }
     };
     

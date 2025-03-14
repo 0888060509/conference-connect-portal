@@ -1,3 +1,4 @@
+
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
@@ -29,6 +30,7 @@ interface MeetingMasterDB extends DBSchema {
     key: number;
     value: PendingOperation;
     indexes: { 'by-processed': boolean };
+    [key: string]: any; // Add string index signature to fix compatibility with DBSchemaValue
   };
 }
 

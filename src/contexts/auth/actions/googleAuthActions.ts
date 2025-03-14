@@ -10,7 +10,7 @@ export const signInWithGoogleAuth = async (
     setError(null);
     
     // Get the current origin for dynamic redirect
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    const redirectUrl = `${window.location.origin}/`;
     console.log("Setting Google auth redirect to:", redirectUrl);
     
     const { data, error } = await supabase.auth.signInWithOAuth({

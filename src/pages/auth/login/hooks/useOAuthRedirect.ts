@@ -44,7 +44,7 @@ export const useOAuthRedirect = ({
           } else if (data.session) {
             console.log('Successfully authenticated after redirect');
             toast.success("Successfully signed in!");
-            navigate(from, { replace: true });
+            navigate('/', { replace: true });
           } else {
             console.log('No session found after redirect');
             

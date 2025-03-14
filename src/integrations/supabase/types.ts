@@ -33,6 +33,27 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       booking_attendees: {
         Row: {
           booking_id: string
@@ -132,6 +153,93 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      directory_integrations: {
+        Row: {
+          config: Json
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          last_sync: string | null
+          provider: string
+          sync_interval: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          config: Json
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_sync?: string | null
+          provider: string
+          sync_interval?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          last_sync?: string | null
+          provider?: string
+          sync_interval?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      jwt_claim_mappings: {
+        Row: {
+          created_at: string | null
+          directory_attribute: string
+          id: string
+          is_active: boolean | null
+          jwt_claim: string
+          transform_function: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          directory_attribute: string
+          id?: string
+          is_active?: boolean | null
+          jwt_claim: string
+          transform_function?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          directory_attribute?: string
+          id?: string
+          is_active?: boolean | null
+          jwt_claim?: string
+          transform_function?: string | null
+        }
+        Relationships: []
+      }
+      mfa_settings: {
+        Row: {
+          created_at: string | null
+          is_enabled: boolean | null
+          methods: Json | null
+          recovery_codes: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          is_enabled?: boolean | null
+          methods?: Json | null
+          recovery_codes?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          is_enabled?: boolean | null
+          methods?: Json | null
+          recovery_codes?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -572,6 +680,12 @@ export type Database = {
     Functions: {
       is_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      validate_password_strength: {
+        Args: {
+          password: string
+        }
         Returns: boolean
       }
     }

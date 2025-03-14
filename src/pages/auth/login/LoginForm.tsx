@@ -209,3 +209,4 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
       </CardContent>
     </Card>
   );
+}

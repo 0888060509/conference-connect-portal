@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
@@ -24,7 +23,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Use the OAuth redirect hook
   const { 
     isGoogleSigningIn, 
@@ -38,12 +37,12 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
     setIsSubmitting(true);
     setLocalError(null);
     clearError();
-    
+
     try {
       console.log("Attempting login with email:", email);
       await login(email, password, remember);
       toast.success("Successfully logged in!");
-      navigate(from, { replace: true });
+      navigate("/", { replace: true }); // Redirect to homepage after successful login
     } catch (err: any) {
       console.error("Login error:", err);
       setLocalError(err?.message || "Login failed");
@@ -58,7 +57,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
       setIsGoogleSigningIn(true);
       setLocalError(null);
       clearError();
-      
+
       console.log("Starting Google sign-in flow");
       await signInWithGoogle();
       // The redirect will happen automatically via Supabase
@@ -96,7 +95,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
             clearError={clearError}
             setLocalError={setLocalError}
           />
-          
+
           <GoogleSignInButton
             onClick={handleGoogleSignIn}
             disabled={isGoogleSigningIn || isSubmitting}

@@ -1,5 +1,6 @@
 
 import { User as SupabaseUser } from "@supabase/supabase-js";
+import { Json } from "@/integrations/supabase/types";
 
 // Define user roles
 export type UserRole = "user" | "admin";
@@ -14,7 +15,7 @@ export interface User {
   role: UserRole;
   created_at?: string;
   last_login?: string;
-  preferences?: Record<string, any>;
+  preferences?: Json;
   
   // Computed property for easy access to full name
   get name(): string;
@@ -42,7 +43,7 @@ export class UserImpl implements User {
   role: UserRole;
   created_at?: string;
   last_login?: string;
-  preferences?: Record<string, any>;
+  preferences?: Json;
 
   constructor(data: Omit<User, 'name'>) {
     this.id = data.id;

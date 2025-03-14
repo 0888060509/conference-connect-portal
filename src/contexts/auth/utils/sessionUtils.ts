@@ -38,7 +38,7 @@ export const initializeAuthState = async (
           department: userData.department,
           created_at: userData.created_at,
           last_login: userData.last_login,
-          preferences: userData.preferences ? userData.preferences : {}
+          preferences: userData.preferences
         });
         
         setUser(user);
@@ -85,7 +85,7 @@ export const setupAuthStateChangeListener = (
           department: userData.department,
           created_at: userData.created_at,
           last_login: userData.last_login,
-          preferences: userData.preferences ? userData.preferences : {}
+          preferences: userData.preferences
         });
         
         setUser(user);
@@ -120,7 +120,7 @@ export const handleExternalAuthUser = async (
         department: userData.department,
         created_at: userData.created_at,
         last_login: userData.last_login,
-        preferences: userData.preferences ? userData.preferences : {}
+        preferences: userData.preferences
       });
       
       setUser(appUser);

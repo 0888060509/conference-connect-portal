@@ -3,52 +3,29 @@
 // for the list of available Workbox modules, or add any other
 // code you'd like.
 
-const CACHE_NAME = 'meetingmaster-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/static/js/main.chunk.js',
-  '/static/js/bundle.js',
-];
-
-// Install a service worker
-self.addEventListener('install', (event) => {
+// Service worker registration
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Opened cache');
-      return cache.addAll(urlsToCache);
+    caches.open('v1').then(cache => {
+      return cache.addAll([
+        '/',
+        '/index.html',
+      ]);
     })
   );
 });
 
-// Cache and return requests
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
-        }
-
-        const responseToCache = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
-        return response;
-      });
+    caches.match(event.request).then(response => {
+      return response || fetch(event.request);
     })
   );
 });
 
 // Update a service worker
 self.addEventListener('activate', (event) => {
-  const cacheWhitelist = [CACHE_NAME];
+  const cacheWhitelist = ['v1'];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -91,7 +68,7 @@ self.addEventListener('push', (event) => {
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
+
   event.waitUntil(
     clients.openWindow(event.notification.data.url)
   );

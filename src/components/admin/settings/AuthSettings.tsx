@@ -586,7 +586,7 @@ export function AuthSettings() {
                     placeholder="<html><body><h1>Verify your email</h1><p>Click the link below to verify your email address:</p><p>{{ .ConfirmationURL }}</p></body></html>"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Use {{ .ConfirmationURL }} to insert the verification link.
+                    Use {"{{ .ConfirmationURL }}"} to insert the verification link.
                   </p>
                 </div>
               )}
@@ -648,7 +648,7 @@ export function AuthSettings() {
                     placeholder="<html><body><h1>Reset your password</h1><p>Click the link below to reset your password:</p><p>{{ .ConfirmationURL }}</p></body></html>"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Use {{ .ConfirmationURL }} to insert the password reset link.
+                    Use {"{{ .ConfirmationURL }}"} to insert the password reset link.
                   </p>
                 </div>
               )}
@@ -710,7 +710,7 @@ export function AuthSettings() {
                     placeholder="<html><body><h1>Sign in to your account</h1><p>Click the link below to sign in to your account:</p><p>{{ .ConfirmationURL }}</p></body></html>"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Use {{ .ConfirmationURL }} to insert the magic link.
+                    Use {"{{ .ConfirmationURL }}"} to insert the magic link.
                   </p>
                 </div>
               )}

@@ -9,6 +9,219 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      amenities: {
+        Row: {
+          category: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          category?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      booking_attendees: {
+        Row: {
+          booking_id: string
+          id: string
+          status: Database["public"]["Enums"]["attendee_status"]
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["attendee_status"]
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["attendee_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_attendees_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_attendees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string
+          id: string
+          recurring_id: string | null
+          room_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["booking_status"]
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time: string
+          id?: string
+          recurring_id?: string | null
+          room_id: string
+          start_time: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string
+          id?: string
+          recurring_id?: string | null
+          room_id?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_recurring_id_fkey"
+            columns: ["recurring_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_patterns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          booking_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean
+          message: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_patterns: {
+        Row: {
+          days_of_week: Json | null
+          end_date: string | null
+          exception_dates: Json | null
+          id: string
+          interval: number
+          occurrence_count: number | null
+          pattern_type: Database["public"]["Enums"]["pattern_type"]
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          days_of_week?: Json | null
+          end_date?: string | null
+          exception_dates?: Json | null
+          id?: string
+          interval?: number
+          occurrence_count?: number | null
+          pattern_type: Database["public"]["Enums"]["pattern_type"]
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          days_of_week?: Json | null
+          end_date?: string | null
+          exception_dates?: Json | null
+          id?: string
+          interval?: number
+          occurrence_count?: number | null
+          pattern_type?: Database["public"]["Enums"]["pattern_type"]
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_patterns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_favorites: {
         Row: {
           created_at: string | null
@@ -185,6 +398,81 @@ export type Database = {
           },
         ]
       }
+      room_amenities: {
+        Row: {
+          amenity_id: string
+          id: string
+          room_id: string
+          status: Database["public"]["Enums"]["amenity_status"]
+        }
+        Insert: {
+          amenity_id: string
+          id?: string
+          room_id: string
+          status?: Database["public"]["Enums"]["amenity_status"]
+        }
+        Update: {
+          amenity_id?: string
+          id?: string
+          room_id?: string
+          status?: Database["public"]["Enums"]["amenity_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_amenities_amenity_id_fkey"
+            columns: ["amenity_id"]
+            isOneToOne: false
+            referencedRelation: "amenities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_amenities_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          building: string | null
+          capacity: number | null
+          created_at: string | null
+          description: string | null
+          floor: string | null
+          id: string
+          image_url: string | null
+          name: string
+          number: string | null
+          status: Database["public"]["Enums"]["room_status"]
+        }
+        Insert: {
+          building?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          description?: string | null
+          floor?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          number?: string | null
+          status?: Database["public"]["Enums"]["room_status"]
+        }
+        Update: {
+          building?: string | null
+          capacity?: number | null
+          created_at?: string | null
+          description?: string | null
+          floor?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          number?: string | null
+          status?: Database["public"]["Enums"]["room_status"]
+        }
+        Relationships: []
+      }
       scheduled_reports: {
         Row: {
           created_at: string | null
@@ -241,15 +529,64 @@ export type Database = {
           },
         ]
       }
+      users: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          email: string
+          first_name: string | null
+          id: string
+          last_login: string | null
+          last_name: string | null
+          preferences: Json | null
+          role: Database["public"]["Enums"]["user_role"]
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          email: string
+          first_name?: string | null
+          id?: string
+          last_login?: string | null
+          last_name?: string | null
+          preferences?: Json | null
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_login?: string | null
+          last_name?: string | null
+          preferences?: Json | null
+          role?: Database["public"]["Enums"]["user_role"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      amenity_status: "available" | "unavailable"
+      attendee_status: "invited" | "confirmed" | "declined"
+      booking_status: "confirmed" | "cancelled" | "completed"
+      notification_type:
+        | "confirmation"
+        | "reminder"
+        | "cancellation"
+        | "modification"
+      pattern_type: "daily" | "weekly" | "monthly"
+      room_status: "active" | "maintenance" | "inactive"
+      user_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never

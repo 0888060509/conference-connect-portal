@@ -7,14 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function UserProfile() {
   const { user, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate passwords
@@ -22,17 +24,37 @@ export function UserProfile() {
       toast.error("New passwords do not match");
       return;
     }
-    
-    // Mock password change
-    toast.success("Password updated successfully");
-    
-    // Reset form
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+
+    try {
+      setIsUpdating(true);
+      
+      // Update password with Supabase
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Password updated successfully");
+      
+      // Reset form
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      console.error("Error updating password:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to update password");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (!user) return null;
+
+  // Generate user's full name
+  const fullName = `${user.first_name} ${user.last_name}`.trim();
+  const displayName = fullName || user.email;
+  const avatarInitial = user.first_name ? user.first_name.charAt(0) : user.email.charAt(0);
 
   return (
     <div className="space-y-6">
@@ -40,11 +62,11 @@ export function UserProfile() {
         <CardHeader>
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src={`https://ui-avatars.com/api/?name=${user.name}&background=random`} />
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`} />
+              <AvatarFallback>{avatarInitial}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle>{user.name}</CardTitle>
+              <CardTitle>{displayName}</CardTitle>
               <CardDescription>{user.email}</CardDescription>
             </div>
           </div>
@@ -61,10 +83,10 @@ export function UserProfile() {
                 <div className="font-medium mt-1">{user.department}</div>
               </div>
             )}
-            {user.position && (
+            {user.last_login && (
               <div>
-                <Label>Position</Label>
-                <div className="font-medium mt-1">{user.position}</div>
+                <Label>Last Login</Label>
+                <div className="font-medium mt-1">{new Date(user.last_login).toLocaleString()}</div>
               </div>
             )}
           </div>
@@ -115,7 +137,9 @@ export function UserProfile() {
             <Button type="button" variant="outline" onClick={logout}>
               Sign Out
             </Button>
-            <Button type="submit">Update Password</Button>
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? "Updating..." : "Update Password"}
+            </Button>
           </CardFooter>
         </form>
       </Card>

@@ -8,10 +8,13 @@ export type UserRole = "user" | "admin";
 export interface User {
   id: string;
   email: string;
-  name: string;
-  role: UserRole;
+  first_name: string;
+  last_name: string;
   department?: string;
-  position?: string;
+  role: UserRole;
+  created_at?: string;
+  last_login?: string;
+  preferences?: Record<string, any>;
 }
 
 export interface AuthContextType {
@@ -31,17 +34,17 @@ export const MOCK_USERS: User[] = [
   {
     id: "1",
     email: "admin@example.com",
-    name: "Admin User",
+    first_name: "Admin",
+    last_name: "User",
     role: "admin",
-    department: "IT",
-    position: "System Administrator"
+    department: "IT"
   },
   {
     id: "2",
     email: "user@example.com",
-    name: "Regular User",
+    first_name: "Regular",
+    last_name: "User",
     role: "user",
-    department: "Marketing",
-    position: "Marketing Specialist"
+    department: "Marketing"
   }
 ];

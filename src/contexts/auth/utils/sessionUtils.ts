@@ -2,99 +2,139 @@
 import { User } from "../types";
 import { supabase } from "@/integrations/supabase/client";
 
-// Handle external auth user (Google, etc)
-export const handleExternalAuthUser = async (authUser: any): Promise<User> => {
-  try {
-    // For demo, create a mock user based on the external auth
-    // In a real app, you would fetch the user profile from your database
-    const newUser: User = {
-      id: authUser.id,
-      email: authUser.email || "",
-      name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || "User",
-      role: "user", // Default role for new users
-    };
-    
-    // Store user if remember me is checked (for this demo, we always remember external auth)
-    localStorage.setItem("meetingmaster_user", JSON.stringify(newUser));
-    
-    // Set session expiry
-    localStorage.setItem("meetingmaster_session_expiry", (Date.now() + 1800000).toString());
-    
-    return newUser;
-  } catch (err) {
-    console.error("Error handling external auth user:", err);
-    throw err;
-  }
-};
-
-// Reset session timeout
-export const setSessionTimeout = (callback: () => void): NodeJS.Timeout => {
-  // Set new timeout (30 minutes = 1800000 ms)
-  const newTimeout = setTimeout(() => {
-    callback();
-  }, 1800000);
-  
-  // Update session expiry time
-  localStorage.setItem("meetingmaster_session_expiry", (Date.now() + 1800000).toString());
-  
-  return newTimeout;
-};
-
-// Initialize auth state
 export const initializeAuthState = async (
   setUser: (user: User | null) => void,
   resetSessionTimeout: () => void,
   setIsLoading: (isLoading: boolean) => void
 ) => {
   try {
-    const storedUser = localStorage.getItem("meetingmaster_user");
-    const storedExpiry = localStorage.getItem("meetingmaster_session_expiry");
+    // Check for an active session in Supabase
+    const { data: { session } } = await supabase.auth.getSession();
     
-    if (storedUser && storedExpiry) {
-      const expiryTime = parseInt(storedExpiry, 10);
+    if (session?.user) {
+      // If we have a session, fetch the user data from our users table
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
       
-      // Check if session is still valid
-      if (expiryTime > Date.now()) {
-        setUser(JSON.parse(storedUser));
+      if (userData) {
+        const user: User = {
+          id: userData.id,
+          email: userData.email,
+          first_name: userData.first_name || '',
+          last_name: userData.last_name || '',
+          role: userData.role,
+          department: userData.department,
+          created_at: userData.created_at,
+          last_login: userData.last_login,
+          preferences: userData.preferences
+        };
+        
+        setUser(user);
         resetSessionTimeout();
       } else {
-        // Session expired
-        localStorage.removeItem("meetingmaster_user");
-        localStorage.removeItem("meetingmaster_session_expiry");
+        // If no user data found, check local storage as fallback
+        checkLocalStorage(setUser, resetSessionTimeout);
       }
+    } else {
+      // If no active session, check local storage as fallback for demo purposes
+      checkLocalStorage(setUser, resetSessionTimeout);
     }
-    
-    // Check for Supabase session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user) {
-      const userObj = await handleExternalAuthUser(session.user);
-      setUser(userObj);
-      resetSessionTimeout();
-    }
-  } catch (e) {
-    console.error("Auth initialization error:", e);
+  } catch (err) {
+    console.error("Error initializing auth state:", err);
+    // Fallback to local storage
+    checkLocalStorage(setUser, resetSessionTimeout);
   } finally {
-    // Ensure loading state is resolved
     setIsLoading(false);
   }
 };
 
-// Setup auth state change listener
 export const setupAuthStateChangeListener = (
   setUser: (user: User | null) => void,
   resetSessionTimeout: () => void
 ) => {
-  return supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const userObj = await handleExternalAuthUser(session.user);
-        setUser(userObj);
+  return supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log("Auth state changed:", event);
+    
+    if (event === 'SIGNED_IN' && session?.user) {
+      // User signed in, fetch their data from our users table
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (userData) {
+        const user: User = {
+          id: userData.id,
+          email: userData.email,
+          first_name: userData.first_name || '',
+          last_name: userData.last_name || '',
+          role: userData.role,
+          department: userData.department,
+          created_at: userData.created_at,
+          last_login: userData.last_login,
+          preferences: userData.preferences
+        };
+        
+        setUser(user);
         resetSessionTimeout();
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        localStorage.removeItem("meetingmaster_user");
-        localStorage.removeItem("meetingmaster_session_expiry");
       }
+    } else if (event === 'SIGNED_OUT') {
+      setUser(null);
     }
-  );
+  });
+};
+
+export const handleExternalAuthUser = async (
+  user: any,
+  setUser: (user: User | null) => void,
+  resetSessionTimeout: () => void
+) => {
+  try {
+    // Fetch user data from our users table
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (userData) {
+      const appUser: User = {
+        id: userData.id,
+        email: userData.email,
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
+        role: userData.role,
+        department: userData.department,
+        created_at: userData.created_at,
+        last_login: userData.last_login,
+        preferences: userData.preferences
+      };
+      
+      setUser(appUser);
+      resetSessionTimeout();
+    }
+  } catch (err) {
+    console.error("Error handling external auth user:", err);
+  }
+};
+
+// Helper function to check local storage for user data (used for demo/fallback)
+const checkLocalStorage = (
+  setUser: (user: User | null) => void,
+  resetSessionTimeout: () => void
+) => {
+  try {
+    const storedUser = localStorage.getItem("meetingmaster_user");
+    if (storedUser) {
+      const user = JSON.parse(storedUser) as User;
+      setUser(user);
+      resetSessionTimeout();
+    }
+  } catch (err) {
+    console.error("Error checking local storage:", err);
+  }
 };

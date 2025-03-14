@@ -8,8 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Create supabase client using the imported one's URL and key
 export const supabaseClient = createClient<Database>(
-  supabase.getUrl().toString(),
-  supabase.getPublicKey() || '',
+  process.env.VITE_SUPABASE_URL || '',
+  process.env.VITE_SUPABASE_ANON_KEY || '',
   {
     auth: {
       persistSession: true,

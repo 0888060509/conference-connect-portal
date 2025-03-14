@@ -1,14 +1,14 @@
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { Calendar, Views, dateFnsLocalizer } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { useBookings, Booking } from "@/hooks/use-bookings";
-import { useCancelBooking, useUpdateBooking, useRealtimeCalendarUpdates, useGenerateICalendar } from "@/hooks/use-calendar-backend";
+import { useCancelBooking, useUpdateBooking, useRealtimeCalendarUpdates } from "@/hooks/use-calendar-backend";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 // Setup localizer for react-big-calendar
@@ -64,9 +64,14 @@ export function BookingCalendar() {
   };
   
   const handleExportToCalendar = async (bookingId: string) => {
-    const { data: icalData } = useGenerateICalendar(bookingId);
-    
-    if (icalData) {
+    try {
+      const response = await fetch(`/api/calendar/export/${bookingId}`);
+      if (!response.ok) {
+        throw new Error('Failed to generate calendar data');
+      }
+      
+      const icalData = await response.text();
+      
       // Create a blob from the iCalendar data
       const blob = new Blob([icalData], { type: 'text/calendar' });
       const url = URL.createObjectURL(blob);
@@ -78,7 +83,7 @@ export function BookingCalendar() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } else {
+    } catch (error) {
       toast.error('Failed to generate calendar data');
     }
   };
@@ -126,7 +131,7 @@ export function BookingCalendar() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-[600px]">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+        <Spinner size="lg" />
       </div>
     );
   }

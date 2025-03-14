@@ -1,66 +1,26 @@
-
-import { useState, useEffect } from "react";
-import { useSwipeable } from "react-swipeable";
-import { Sidebar } from "./Sidebar";
-import { Header } from "./Header";
-import { MobileNavigation } from "./MobileNavigation";
-import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
+import React, { ReactNode } from "react";
+import { SystemAnnouncement } from "@/components/realtime/SystemAnnouncement";
 
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
   title?: string;
 }
 
 export function Layout({ children, title }: LayoutProps) {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const isMobile = useIsMobile();
-
-  // On mobile, sidebar starts collapsed
-  useEffect(() => {
-    if (isMobile) {
-      setSidebarCollapsed(true);
-    }
-  }, [isMobile]);
-
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
-
-  // Swipe handlers for opening/closing sidebar
-  const swipeHandlers = useSwipeable({
-    onSwipedRight: () => {
-      if (sidebarCollapsed && isMobile) {
-        setSidebarCollapsed(false);
-      }
-    },
-    onSwipedLeft: () => {
-      if (!sidebarCollapsed && isMobile) {
-        setSidebarCollapsed(true);
-      }
-    },
-    trackMouse: false,
-    preventScrollOnSwipe: true,
-  });
-
   return (
-    <div className="min-h-screen bg-background">
-      <Sidebar collapsed={sidebarCollapsed} toggleSidebar={toggleSidebar} />
-      <Header 
-        isSidebarCollapsed={sidebarCollapsed} 
-        toggleSidebar={toggleSidebar} 
-        title={title}
-      />
-      <main
-        {...swipeHandlers}
-        className={cn(
-          "pt-16 min-h-screen transition-all duration-300 pb-16 md:pb-0",
-          sidebarCollapsed ? "ml-16" : "ml-64"
-        )}
-      >
-        <div className="p-4 md:p-6">{children}</div>
-      </main>
-      <MobileNavigation />
+    <div className="min-h-screen flex flex-col">
+      {/* Header, navigation, etc. would be here */}
+      <div className="flex-1 container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {title && <h1 className="text-2xl font-bold mb-6">{title}</h1>}
+        
+        {/* System announcements appear at the top of every page */}
+        <div className="mb-4">
+          <SystemAnnouncement />
+        </div>
+        
+        {children}
+      </div>
+      {/* Footer would be here */}
     </div>
   );
 }

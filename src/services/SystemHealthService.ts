@@ -19,7 +19,11 @@ export const getSystemHealth = async (): Promise<SystemHealthStatus[]> => {
     
     if (error) throw error;
     
-    return data;
+    // Cast the response to ensure it matches our expected type
+    return data.map(item => ({
+      ...item,
+      status: item.status as 'healthy' | 'warning' | 'critical' | 'unknown'
+    }));
   } catch (error) {
     console.error('Failed to fetch system health:', error);
     toast.error('Failed to load system health data');

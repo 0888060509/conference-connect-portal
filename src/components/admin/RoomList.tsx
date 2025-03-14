@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -156,7 +155,7 @@ export function RoomList() {
   };
 
   // Handle room update from edit form
-  const handleRoomUpdated = (updatedRoom: Room) => {
+  const handleRoomUpdated = (updatedRoom: any) => {
     setRooms(rooms.map(room => 
       room.id === updatedRoom.id ? updatedRoom : room
     ));
@@ -165,7 +164,7 @@ export function RoomList() {
   };
 
   // Handle room created from form
-  const handleRoomCreated = (newRoom: Room) => {
+  const handleRoomCreated = (newRoom: any) => {
     setRooms([...rooms, newRoom]);
   };
 
@@ -342,7 +341,7 @@ export function RoomList() {
                     <Badge 
                       variant={
                         room.status === 'active' ? "secondary" : 
-                        room.status === 'maintenance' ? "warning" : 
+                        room.status === 'maintenance' ? "outline" : 
                         "destructive"
                       }
                     >
@@ -396,9 +395,9 @@ export function RoomList() {
         <RoomFormDialog
           open={isEditOpen}
           onOpenChange={setIsEditOpen}
-          room={editRoom}
+          room={editRoom as any}
           mode="edit"
-          onSave={handleRoomUpdated}
+          onSave={handleRoomUpdated as any}
         />
       )}
 

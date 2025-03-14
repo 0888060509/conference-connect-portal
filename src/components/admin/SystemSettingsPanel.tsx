@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +18,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 
+interface SettingsComponentProps {
+  settings: Record<string, any>;
+  onUpdateSetting: (key: string, value: any) => Promise<void>;
+}
+
 export function SystemSettingsPanel() {
   const [activeTab, setActiveTab] = useState("general");
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +38,6 @@ export function SystemSettingsPanel() {
   const loadInitialData = async () => {
     setIsLoading(true);
     try {
-      // Fetch settings
       const settingsData = await getSystemSettings();
       const settingsMap: Record<string, any> = {};
       settingsData.forEach(setting => {
@@ -42,12 +45,10 @@ export function SystemSettingsPanel() {
       });
       setSettings(settingsMap);
       
-      // Perform health check
       await performHealthCheck();
       const healthData = await getSystemHealth();
       setSystemHealth(healthData);
       
-      // Fetch recent activity
       const { logs } = await getAuditLogs(10);
       setRecentActivity(logs);
     } catch (error) {
@@ -114,9 +115,9 @@ export function SystemSettingsPanel() {
                   <span className="font-medium">{item.category}</span>
                   <Badge 
                     variant={
-                      item.status === 'healthy' ? 'success' : 
-                      item.status === 'warning' ? 'warning' : 
-                      'destructive'
+                      item.status === 'healthy' ? "secondary" : 
+                      item.status === 'warning' ? "outline" : 
+                      "destructive"
                     }
                   >
                     {item.status}
@@ -198,7 +199,6 @@ export function SystemSettingsPanel() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {/* Implement general settings UI */}
                 <div className="border rounded-md p-4 bg-muted/20">
                   <p className="text-center text-muted-foreground">
                     General settings interface will be implemented here
@@ -262,7 +262,6 @@ export function SystemSettingsPanel() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {/* Implement backup UI - will be done in another component */}
                 <div className="border rounded-md p-4 bg-muted/20">
                   <p className="text-center text-muted-foreground">
                     Backup and restore interface will be implemented here

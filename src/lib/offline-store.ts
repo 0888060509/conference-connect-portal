@@ -1,4 +1,3 @@
-
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
@@ -32,9 +31,6 @@ interface MeetingMasterDB extends DBSchema {
     indexes: { 'by-processed': boolean };
   };
 }
-
-// We don't need to manually extend DBSchema anymore since we've included pendingOperations
-// in our MeetingMasterDB interface above
 
 let dbPromise: Promise<IDBPDatabase<MeetingMasterDB>> | null = null;
 

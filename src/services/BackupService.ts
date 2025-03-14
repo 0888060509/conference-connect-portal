@@ -30,7 +30,13 @@ export const getBackupHistory = async (): Promise<BackupRecord[]> => {
     
     if (error) throw error;
     
-    return data;
+    // Cast the response to ensure it matches our expected type
+    return data.map(item => ({
+      ...item,
+      status: item.status as 'pending' | 'completed' | 'failed',
+      // Remove the creator field as it's not in our BackupRecord type
+      creator: undefined
+    }));
   } catch (error) {
     console.error('Failed to fetch backup history:', error);
     toast.error('Failed to load backup history');

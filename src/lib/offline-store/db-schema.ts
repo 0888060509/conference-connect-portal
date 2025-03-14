@@ -1,5 +1,5 @@
 
-import { openDB, DBSchema, IDBPDatabase, DBSchemaValue } from 'idb';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
 
@@ -11,6 +11,13 @@ export interface PendingOperation {
   table: string;
   data: any;
   processed: boolean;
+}
+
+// Define a fallback type for DB schema values if not provided by idb
+interface DBSchemaValue {
+  key: string | number;
+  value: any;
+  indexes?: { [key: string]: string | number | boolean | Date };
 }
 
 // Define the schema structure for the database
@@ -30,7 +37,7 @@ export interface MeetingMasterDB extends DBSchema {
     value: PendingOperation;
     indexes: { 'by-processed': boolean };
   };
-  // Add string index signature to make it compatible with DBSchemaValue
+  // Add string index signature for compatibility
   [key: string]: DBSchemaValue;
 }
 

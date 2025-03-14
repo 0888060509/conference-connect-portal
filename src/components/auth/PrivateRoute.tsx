@@ -9,6 +9,7 @@ export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
 
+  //Improved loading state handling to prevent redirect loops.
   if (isLoading) {
     return <div>Loading...</div>;
   }

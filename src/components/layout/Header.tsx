@@ -1,12 +1,13 @@
 
 import { Link } from "react-router-dom";
-import { MenuIcon, ChevronDown } from "lucide-react";
+import { MenuIcon, ChevronDown, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { NotificationCenter } from "../notifications/NotificationCenter";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface HeaderProps {
   isSidebarCollapsed: boolean;
@@ -37,6 +38,20 @@ export function Header({ isSidebarCollapsed, toggleSidebar, title }: HeaderProps
         </div>
 
         <div className="flex items-center gap-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" asChild>
+                  <Link to="/help">
+                    <HelpCircle className="h-5 w-5" />
+                    <span className="sr-only">Help Center</span>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Help Center</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           <NotificationCenter />
 
           {user && (
@@ -63,6 +78,9 @@ export function Header({ isSidebarCollapsed, toggleSidebar, title }: HeaderProps
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/settings">Settings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/help">Help Center</Link>
                 </DropdownMenuItem>
                 {user.role === "admin" && (
                   <DropdownMenuItem asChild>

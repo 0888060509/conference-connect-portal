@@ -23,6 +23,9 @@ import RoomAdmin from "./pages/RoomAdmin";
 import SystemSettings from "./pages/SystemSettings";
 import Notifications from "./pages/Notifications";
 import NotificationPreferences from "./pages/NotificationPreferences";
+import WaitlistAdmin from "./pages/WaitlistAdmin";
+import ConflictRulesAdmin from "./pages/ConflictRulesAdmin";
+import HelpCenter from "./pages/HelpCenter";
 import { useEffect } from "react";
 import { requestNotificationPermission } from "./utils/notificationUtils";
 
@@ -74,6 +77,7 @@ const App = () => {
                       <Route path="/profile" element={<Profile />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/notification-preferences" element={<NotificationPreferences />} />
+                      <Route path="/help" element={<HelpCenter />} />
                     </Route>
                     
                     {/* Admin-only routes */}
@@ -81,6 +85,8 @@ const App = () => {
                       <Route path="/admin" element={<AdminPanel />} />
                       <Route path="/admin/rooms" element={<RoomAdmin />} />
                       <Route path="/admin/settings" element={<SystemSettings />} />
+                      <Route path="/admin/waitlist" element={<WaitlistAdmin />} />
+                      <Route path="/admin/conflict-rules" element={<ConflictRulesAdmin />} />
                     </Route>
                   </>
                 )}

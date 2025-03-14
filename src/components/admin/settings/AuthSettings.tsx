@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -48,12 +47,14 @@ export function AuthSettings() {
     google: {
       enabled: false,
       client_id: '',
-      client_secret: ''
+      secret: '',
+      redirect_uri: ''
     },
     microsoft: {
       enabled: false,
       client_id: '',
-      client_secret: '',
+      secret: '',
+      redirect_uri: '',
       tenant_id: ''
     }
   });
@@ -61,15 +62,21 @@ export function AuthSettings() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplates>({
     verification: {
       subject: 'Verify your email',
-      custom_template: false
+      content_html: '',
+      custom_template: false,
+      html_content: ''
     },
     password_reset: {
       subject: 'Reset your password',
-      custom_template: false
+      content_html: '',
+      custom_template: false,
+      html_content: ''
     },
     magic_link: {
       subject: 'Your magic link',
-      custom_template: false
+      content_html: '',
+      custom_template: false,
+      html_content: ''
     }
   });
 
@@ -156,12 +163,14 @@ export function AuthSettings() {
             google: {
               enabled: false,
               client_id: '',
-              client_secret: ''
+              secret: '',
+              redirect_uri: ''
             },
             microsoft: {
               enabled: false,
               client_id: '',
-              client_secret: '',
+              secret: '',
+              redirect_uri: '',
               tenant_id: ''
             }
           });
@@ -170,15 +179,21 @@ export function AuthSettings() {
           setEmailTemplates({
             verification: {
               subject: 'Verify your email',
-              custom_template: false
+              content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>',
+              custom_template: false,
+              html_content: ''
             },
             password_reset: {
               subject: 'Reset your password',
-              custom_template: false
+              content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>',
+              custom_template: false,
+              html_content: ''
             },
             magic_link: {
               subject: 'Your magic link',
-              custom_template: false
+              content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>',
+              custom_template: false,
+              html_content: ''
             }
           });
           break;
@@ -438,12 +453,12 @@ export function AuthSettings() {
                 <Input
                   id="google_client_secret"
                   type="password"
-                  value={oauthProviders.google.client_secret}
+                  value={oauthProviders.google.secret}
                   onChange={(e) => setOauthProviders({
                     ...oauthProviders,
                     google: {
                       ...oauthProviders.google,
-                      client_secret: e.target.value
+                      secret: e.target.value
                     }
                   })}
                   placeholder="Google OAuth Client Secret"
@@ -496,12 +511,12 @@ export function AuthSettings() {
                 <Input
                   id="microsoft_client_secret"
                   type="password"
-                  value={oauthProviders.microsoft.client_secret}
+                  value={oauthProviders.microsoft.secret}
                   onChange={(e) => setOauthProviders({
                     ...oauthProviders,
                     microsoft: {
                       ...oauthProviders.microsoft,
-                      client_secret: e.target.value
+                      secret: e.target.value
                     }
                   })}
                   placeholder="Microsoft OAuth Client Secret"
@@ -583,7 +598,7 @@ export function AuthSettings() {
                         html_content: e.target.value
                       }
                     })}
-                    placeholder="<html><body><h1>Verify your email</h1><p>Click the link below to verify your email address:</p><p>{{ .ConfirmationURL }}</p></body></html>"
+                    placeholder="<html><body><h1>Verify your email</h1><p>Click the link below to verify your email address:</p><p>{"{{ .ConfirmationURL }}"}</p></body></html>"
                   />
                   <p className="text-xs text-muted-foreground">
                     Use {"{{ .ConfirmationURL }}"} to insert the verification link.
@@ -645,7 +660,7 @@ export function AuthSettings() {
                         html_content: e.target.value
                       }
                     })}
-                    placeholder="<html><body><h1>Reset your password</h1><p>Click the link below to reset your password:</p><p>{{ .ConfirmationURL }}</p></body></html>"
+                    placeholder="<html><body><h1>Reset your password</h1><p>Click the link below to reset your password:</p><p>{"{{ .ConfirmationURL }}"}</p></body></html>"
                   />
                   <p className="text-xs text-muted-foreground">
                     Use {"{{ .ConfirmationURL }}"} to insert the password reset link.
@@ -707,7 +722,7 @@ export function AuthSettings() {
                         html_content: e.target.value
                       }
                     })}
-                    placeholder="<html><body><h1>Sign in to your account</h1><p>Click the link below to sign in to your account:</p><p>{{ .ConfirmationURL }}</p></body></html>"
+                    placeholder="<html><body><h1>Sign in to your account</h1><p>Click the link below to sign in to your account:</p><p>{"{{ .ConfirmationURL }}"}</p></body></html>"
                   />
                   <p className="text-xs text-muted-foreground">
                     Use {"{{ .ConfirmationURL }}"} to insert the magic link.

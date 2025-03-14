@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
 
@@ -21,6 +20,7 @@ export interface OAuthProvider {
   client_id: string;
   secret: string;
   redirect_uri: string;
+  tenant_id?: string;
 }
 
 export interface OAuthProviders {
@@ -31,6 +31,8 @@ export interface OAuthProviders {
 export interface EmailTemplate {
   subject: string;
   content_html: string;
+  custom_template?: boolean;
+  html_content?: string;
 }
 
 export interface EmailTemplates {
@@ -39,10 +41,17 @@ export interface EmailTemplates {
   magic_link: EmailTemplate;
 }
 
-// Helper functions to safely cast between types
+export interface DirectoryIntegration {
+  id: string;
+  provider: 'azure_ad' | 'ldap' | 'okta' | 'google';
+  config: Record<string, any>;
+  enabled: boolean;
+  sync_interval: number;
+  last_sync: string | null;
+}
+
 const jsonToPasswordPolicy = (json: Json | null): PasswordPolicy => {
   if (!json || typeof json !== 'object') {
-    // Default policy if none exists
     return {
       min_length: 8,
       require_uppercase: true,
@@ -65,7 +74,6 @@ const jsonToPasswordPolicy = (json: Json | null): PasswordPolicy => {
 
 const jsonToSessionSettings = (json: Json | null): SessionSettings => {
   if (!json || typeof json !== 'object') {
-    // Default settings if none exists
     return {
       session_duration_seconds: 3600,
       refresh_token_rotation: true,
@@ -84,7 +92,6 @@ const jsonToSessionSettings = (json: Json | null): SessionSettings => {
 
 const jsonToOAuthProviders = (json: Json | null): OAuthProviders => {
   if (!json || typeof json !== 'object') {
-    // Default providers if none exists
     return {
       google: {
         enabled: false,
@@ -96,18 +103,13 @@ const jsonToOAuthProviders = (json: Json | null): OAuthProviders => {
         enabled: false,
         client_id: '',
         secret: '',
-        redirect_uri: ''
+        redirect_uri: '',
+        tenant_id: ''
       }
     };
   }
   
   const obj = json as Record<string, any>;
-  const defaultProvider = {
-    enabled: false,
-    client_id: '',
-    secret: '',
-    redirect_uri: ''
-  };
   
   return {
     google: {
@@ -120,54 +122,75 @@ const jsonToOAuthProviders = (json: Json | null): OAuthProviders => {
       enabled: Boolean(obj.microsoft?.enabled),
       client_id: String(obj.microsoft?.client_id || ''),
       secret: String(obj.microsoft?.secret || ''),
-      redirect_uri: String(obj.microsoft?.redirect_uri || '')
+      redirect_uri: String(obj.microsoft?.redirect_uri || ''),
+      tenant_id: String(obj.microsoft?.tenant_id || '')
     }
   };
 };
 
 const jsonToEmailTemplates = (json: Json | null): EmailTemplates => {
   if (!json || typeof json !== 'object') {
-    // Default templates if none exists
     return {
       verification: {
         subject: 'Verify your email',
-        content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>'
+        content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>',
+        custom_template: false
       },
       password_reset: {
         subject: 'Reset your password',
-        content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>'
+        content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>',
+        custom_template: false
       },
       magic_link: {
         subject: 'Your magic link',
-        content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>'
+        content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>',
+        custom_template: false
       }
     };
   }
   
   const obj = json as Record<string, any>;
-  const defaultTemplate = {
-    subject: '',
-    content_html: ''
-  };
   
   return {
     verification: {
       subject: String(obj.verification?.subject || 'Verify your email'),
-      content_html: String(obj.verification?.content_html || '<p>Please verify your email</p>')
+      content_html: String(obj.verification?.content_html || '<p>Please verify your email</p>'),
+      custom_template: Boolean(obj.verification?.custom_template),
+      html_content: String(obj.verification?.html_content || '')
     },
     password_reset: {
       subject: String(obj.password_reset?.subject || 'Reset your password'),
-      content_html: String(obj.password_reset?.content_html || '<p>Reset your password</p>')
+      content_html: String(obj.password_reset?.content_html || '<p>Reset your password</p>'),
+      custom_template: Boolean(obj.password_reset?.custom_template),
+      html_content: String(obj.password_reset?.html_content || '')
     },
     magic_link: {
       subject: String(obj.magic_link?.subject || 'Your magic link'),
-      content_html: String(obj.magic_link?.content_html || '<p>Click to sign in</p>')
+      content_html: String(obj.magic_link?.content_html || '<p>Click to sign in</p>'),
+      custom_template: Boolean(obj.magic_link?.custom_template),
+      html_content: String(obj.magic_link?.html_content || '')
     }
   };
 };
 
+const jsonToDirectoryIntegration = (json: Json): DirectoryIntegration => {
+  if (!json || typeof json !== 'object') {
+    throw new Error('Invalid directory integration data');
+  }
+  
+  const obj = json as Record<string, any>;
+  
+  return {
+    id: String(obj.id || ''),
+    provider: String(obj.provider || 'azure_ad') as DirectoryIntegration['provider'],
+    config: obj.config || {},
+    enabled: Boolean(obj.enabled),
+    sync_interval: Number(obj.sync_interval || 24),
+    last_sync: obj.last_sync ? String(obj.last_sync) : null
+  };
+};
+
 class AuthConfigService {
-  // Get password policy from auth settings
   async getPasswordPolicy(): Promise<PasswordPolicy> {
     try {
       const { data, error } = await supabase
@@ -179,7 +202,6 @@ class AuthConfigService {
       if (error) throw error;
       
       if (!data) {
-        // Default policy if none exists
         return {
           min_length: 8,
           require_uppercase: true,
@@ -192,7 +214,6 @@ class AuthConfigService {
       return jsonToPasswordPolicy(data.setting_value);
     } catch (error) {
       console.error('Error fetching password policy:', error);
-      // Return default policy
       return {
         min_length: 8,
         require_uppercase: true,
@@ -203,7 +224,6 @@ class AuthConfigService {
     }
   }
   
-  // Update password policy
   async updatePasswordPolicy(policy: PasswordPolicy): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -225,7 +245,6 @@ class AuthConfigService {
     }
   }
   
-  // Get session settings from auth settings
   async getSessionSettings(): Promise<SessionSettings> {
     try {
       const { data, error } = await supabase
@@ -237,7 +256,6 @@ class AuthConfigService {
       if (error) throw error;
       
       if (!data) {
-        // Default settings if none exists
         return {
           session_duration_seconds: 3600,
           refresh_token_rotation: true,
@@ -248,7 +266,6 @@ class AuthConfigService {
       return jsonToSessionSettings(data.setting_value);
     } catch (error) {
       console.error('Error fetching session settings:', error);
-      // Return default settings
       return {
         session_duration_seconds: 3600,
         refresh_token_rotation: true,
@@ -257,7 +274,6 @@ class AuthConfigService {
     }
   }
   
-  // Update session settings
   async updateSessionSettings(settings: SessionSettings): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -279,7 +295,6 @@ class AuthConfigService {
     }
   }
   
-  // Get OAuth providers config from auth settings
   async getOAuthProviders(): Promise<OAuthProviders> {
     try {
       const { data, error } = await supabase
@@ -291,7 +306,6 @@ class AuthConfigService {
       if (error) throw error;
       
       if (!data) {
-        // Default providers if none exists
         return {
           google: {
             enabled: false,
@@ -311,7 +325,6 @@ class AuthConfigService {
       return jsonToOAuthProviders(data.setting_value);
     } catch (error) {
       console.error('Error fetching OAuth providers:', error);
-      // Return default providers
       return {
         google: {
           enabled: false,
@@ -329,7 +342,6 @@ class AuthConfigService {
     }
   }
   
-  // Update OAuth providers config
   async updateOAuthProviders(providers: OAuthProviders): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -351,7 +363,6 @@ class AuthConfigService {
     }
   }
   
-  // Get email templates from auth settings
   async getEmailTemplates(): Promise<EmailTemplates> {
     try {
       const { data, error } = await supabase
@@ -363,7 +374,6 @@ class AuthConfigService {
       if (error) throw error;
       
       if (!data) {
-        // Default templates if none exists
         return {
           verification: {
             subject: 'Verify your email',
@@ -383,7 +393,6 @@ class AuthConfigService {
       return jsonToEmailTemplates(data.setting_value);
     } catch (error) {
       console.error('Error fetching email templates:', error);
-      // Return default templates
       return {
         verification: {
           subject: 'Verify your email',
@@ -401,7 +410,6 @@ class AuthConfigService {
     }
   }
   
-  // Update email templates
   async updateEmailTemplates(templates: EmailTemplates): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -423,7 +431,6 @@ class AuthConfigService {
     }
   }
   
-  // Check if email verification is required for signup
   async isEmailVerificationRequired(): Promise<boolean> {
     try {
       const { data, error } = await supabase
@@ -435,17 +442,16 @@ class AuthConfigService {
       if (error) throw error;
       
       if (!data) {
-        return true; // Default to true if setting doesn't exist
+        return true;
       }
       
       return Boolean(data.setting_value);
     } catch (error) {
       console.error('Error checking email verification requirement:', error);
-      return true; // Default to true on error
+      return true;
     }
   }
   
-  // Set whether email verification is required for signup
   async setEmailVerificationRequired(required: boolean): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -467,7 +473,6 @@ class AuthConfigService {
     }
   }
   
-  // Get MFA settings for an organization
   async getMfaSettings(): Promise<{ is_required: boolean, allowed_methods: string[] }> {
     try {
       const { data, error } = await supabase
@@ -479,7 +484,6 @@ class AuthConfigService {
       if (error) throw error;
       
       if (!data) {
-        // Default MFA settings if none exists
         return {
           is_required: false,
           allowed_methods: ['totp']
@@ -496,7 +500,6 @@ class AuthConfigService {
       };
     } catch (error) {
       console.error('Error fetching MFA settings:', error);
-      // Return default settings
       return {
         is_required: false,
         allowed_methods: ['totp']
@@ -504,7 +507,6 @@ class AuthConfigService {
     }
   }
   
-  // Update MFA settings for an organization
   async updateMfaSettings(settings: { is_required: boolean, allowed_methods: string[] }): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -522,6 +524,87 @@ class AuthConfigService {
       return true;
     } catch (error) {
       console.error('Error updating MFA settings:', error);
+      return false;
+    }
+  }
+  
+  async getDirectoryIntegrations(): Promise<DirectoryIntegration[]> {
+    try {
+      const { data, error } = await supabase
+        .from('directory_integrations')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        return [];
+      }
+      
+      return data.map(item => jsonToDirectoryIntegration(item as unknown as Json));
+    } catch (error) {
+      console.error('Error fetching directory integrations:', error);
+      return [];
+    }
+  }
+  
+  async createDirectoryIntegration(integration: Omit<DirectoryIntegration, 'id' | 'last_sync'>): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('directory_integrations')
+        .insert({
+          provider: integration.provider,
+          config: integration.config as unknown as Json,
+          enabled: integration.enabled,
+          sync_interval: integration.sync_interval,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      
+      if (error) throw error;
+      
+      return data.id;
+    } catch (error) {
+      console.error('Error creating directory integration:', error);
+      throw error;
+    }
+  }
+  
+  async updateDirectoryIntegration(integration: DirectoryIntegration): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('directory_integrations')
+        .update({
+          provider: integration.provider,
+          config: integration.config as unknown as Json,
+          enabled: integration.enabled,
+          sync_interval: integration.sync_interval,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', integration.id);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating directory integration:', error);
+      return false;
+    }
+  }
+  
+  async deleteDirectoryIntegration(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('directory_integrations')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting directory integration:', error);
       return false;
     }
   }

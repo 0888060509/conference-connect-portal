@@ -1,6 +1,6 @@
 
 import { useEffect } from 'react';
-import { RealtimeChannel, RealtimePostgresChangesPayload, REALTIME_SUBSCRIBE_STATES } from '@supabase/supabase-js';
+import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
 type EventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
@@ -48,7 +48,7 @@ export function useRealtime<T = any>(
       channel = supabase
         .channel(channelName)
         .on(
-          'postgres_changes' as any, // Type assertion to bypass type checking
+          'postgres_changes',
           {
             event,
             schema,
@@ -56,7 +56,8 @@ export function useRealtime<T = any>(
             filter,
           }, 
           (payload) => {
-            callback(payload as RealtimePostgresChangesPayload<T>);
+            // Use type assertion to handle the payload correctly
+            callback(payload as unknown as RealtimePostgresChangesPayload<T>);
           }
         )
         .subscribe((status) => {
@@ -102,18 +103,21 @@ export function usePresence<T extends Record<string, any>>(
     // Configure presence handlers
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState() as unknown;
+        const state = channel.presenceState();
         if (callbacks?.onSync) {
-          callbacks.onSync(state as Record<string, T[]>);
+          // Type assertion to handle the state correctly
+          callbacks.onSync(state as unknown as Record<string, T[]>);
         }
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
         if (callbacks?.onJoin) {
+          // Type assertion to handle the presences correctly
           callbacks.onJoin(key, newPresences as unknown as T[]);
         }
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         if (callbacks?.onLeave) {
+          // Type assertion to handle the presences correctly
           callbacks.onLeave(key, leftPresences as unknown as T[]);
         }
       })

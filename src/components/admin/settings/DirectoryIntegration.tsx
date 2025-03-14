@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { 
   Card, 
@@ -52,6 +51,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth";
+
+type DirectoryProviderType = 'azure_ad' | 'ldap' | 'okta' | 'google';
 
 export function DirectoryIntegration() {
   const { user } = useAuth();
@@ -246,6 +247,30 @@ export function DirectoryIntegration() {
     }
   };
   
+  const handleProviderChange = (value: string) => {
+    // Validate that value is a valid provider type
+    const providerType = (value as DirectoryProviderType);
+    
+    // Set default config based on provider
+    let defaultConfig = {};
+    
+    if (providerType === 'azure_ad') {
+      defaultConfig = { tenant_id: '', client_id: '', client_secret: '' };
+    } else if (providerType === 'ldap') {
+      defaultConfig = { ldap_url: '', bind_dn: '', bind_password: '' };
+    } else if (providerType === 'okta') {
+      defaultConfig = { domain: '', api_token: '' };
+    } else if (providerType === 'google') {
+      defaultConfig = { admin_email: '', credentials_json: '' };
+    }
+    
+    setNewIntegration({
+      ...newIntegration,
+      provider: providerType,
+      config: defaultConfig
+    });
+  };
+  
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -428,13 +453,7 @@ export function DirectoryIntegration() {
                   <Label htmlFor="provider">Directory Provider</Label>
                   <Select
                     value={newIntegration.provider}
-                    onValueChange={(value) => setNewIntegration({
-                      ...newIntegration,
-                      provider: value,
-                      config: value === 'azure_ad' 
-                        ? { tenant_id: '', client_id: '', client_secret: '' } 
-                        : { ldap_url: '', bind_dn: '', bind_password: '' }
-                    })}
+                    onValueChange={handleProviderChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a provider" />

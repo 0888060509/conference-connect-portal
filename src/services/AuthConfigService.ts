@@ -134,17 +134,20 @@ const jsonToEmailTemplates = (json: Json | null): EmailTemplates => {
       verification: {
         subject: 'Verify your email',
         content_html: '<p>Please verify your email by clicking the link: {{ .ConfirmationURL }}</p>',
-        custom_template: false
+        custom_template: false,
+        html_content: ''
       },
       password_reset: {
         subject: 'Reset your password',
         content_html: '<p>Reset your password by clicking the link: {{ .ConfirmationURL }}</p>',
-        custom_template: false
+        custom_template: false,
+        html_content: ''
       },
       magic_link: {
         subject: 'Your magic link',
         content_html: '<p>Click the link to sign in: {{ .ConfirmationURL }}</p>',
-        custom_template: false
+        custom_template: false,
+        html_content: ''
       }
     };
   }
@@ -179,10 +182,15 @@ const jsonToDirectoryIntegration = (json: Json): DirectoryIntegration => {
   }
   
   const obj = json as Record<string, any>;
+  const provider = String(obj.provider || 'azure_ad');
+  
+  if (!['azure_ad', 'ldap', 'okta', 'google'].includes(provider)) {
+    throw new Error(`Invalid provider type: ${provider}`);
+  }
   
   return {
     id: String(obj.id || ''),
-    provider: String(obj.provider || 'azure_ad') as DirectoryIntegration['provider'],
+    provider: provider as DirectoryIntegration['provider'],
     config: obj.config || {},
     enabled: Boolean(obj.enabled),
     sync_interval: Number(obj.sync_interval || 24),

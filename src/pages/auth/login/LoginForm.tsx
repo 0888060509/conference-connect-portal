@@ -44,11 +44,9 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
       clearError();
       console.log("Starting Google sign-in flow");
       await signInWithGoogle();
-      // No need to navigate here as the auth state change will trigger a redirect
+      // The redirect will happen automatically via Supabase
     } catch (err) {
       console.error("Google sign in error:", err);
-    } finally {
-      // We might not reach this if redirected
       setIsGoogleSigningIn(false);
     }
   };
@@ -115,7 +113,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
             </label>
           </div>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
+          <Button type="submit" className="w-full" disabled={isSubmitting || isGoogleSigningIn}>
             {isSubmitting ? "Logging in..." : "Login"}
           </Button>
           
@@ -129,7 +127,7 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
             type="button" 
             variant="outline" 
             onClick={handleGoogleSignIn} 
-            disabled={isGoogleSigningIn || isLoading}
+            disabled={isGoogleSigningIn || isSubmitting}
             className="w-full"
           >
             {isGoogleSigningIn ? (

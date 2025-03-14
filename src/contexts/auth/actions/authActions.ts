@@ -122,17 +122,20 @@ export const signInWithGoogleAuth = async (
     setError(null);
     setIsLoading(true);
     
-    // Log current origin for debugging
-    console.log("Current origin:", window.location.origin);
+    // Get current origin for redirects
+    const redirectUrl = `${window.location.origin}/dashboard`;
+    console.log("Redirect URL:", redirectUrl);
     
+    // Use immediate_redirect: false to prevent popup blockers
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: redirectUrl,
         queryParams: {
           access_type: 'offline',
           prompt: 'consent',
-        }
+        },
+        skipBrowserRedirect: false
       }
     });
     
@@ -141,12 +144,12 @@ export const signInWithGoogleAuth = async (
       throw error;
     }
     
-    console.log("Google sign-in initiated:", data);
+    console.log("Google sign-in initiated successfully");
+    return data;
   } catch (err) {
     console.error("Google sign-in exception:", err);
     setError(err instanceof Error ? err.message : "Google sign-in failed");
-    throw err;
-  } finally {
     setIsLoading(false);
+    throw err;
   }
 };

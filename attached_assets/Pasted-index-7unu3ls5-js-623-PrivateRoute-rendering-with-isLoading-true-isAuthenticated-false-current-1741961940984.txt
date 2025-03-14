@@ -1,0 +1,80 @@
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: false, currentPath: '/dashboard', user: 'No user'}
+The script has an unsupported MIME type ('text/vnd.trolltech.linguist').Understand this errorAI
+index-7unu3ls5.js:829 ServiceWorker registration failed:  SecurityError: Failed to register a ServiceWorker for scope ('https://conference-connect-portal.lovable.app/') with script ('https://conference-connect-portal.lovable.app/serviceWorker.ts'): The script has an unsupported MIME type ('text/vnd.trolltech.linguist').
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: false, currentPath: '/dashboard', user: 'No user'}
+index-7unu3ls5.js:618 Auth state changed: SIGNED_IN
+index-7unu3ls5.js:618 User signed in: cuong.huynh@eggstech.io
+index-7unu3ls5.js:618 Auth state changed: SIGNED_IN
+index-7unu3ls5.js:618 User signed in: cuong.huynh@eggstech.io
+index-7unu3ls5.js:618 Found Supabase session: {provider_token: 'ya29.a0AeXRPp5LxA5C13YP63FOC5lYPkewjd9E1NG4e7l81ii…OwaCgYKAacSARMSFQHGX2MiCZFvG6QZdoS2Ux55g_o7uQ0177', access_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6Im9OeUxUdTAzVCswc0pJbk…HNlfQ.aU4uOYsdYQUaXndQ7GVBLSj4Min_EjDC_yIhifTposo', expires_in: 3600, expires_at: 1741965464, refresh_token: '7yeq_3M56J3UfmCflh7vjw', …}
+index-7unu3ls5.js:618 Auth state changed: INITIAL_SESSION
+index-7unu3ls5.js:829 Synced 0 rooms to local DB
+index-7unu3ls5.js:618 Setting session timeout
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:618 Found Supabase session: {provider_token: 'ya29.a0AeXRPp5LxA5C13YP63FOC5lYPkewjd9E1NG4e7l81ii…OwaCgYKAacSARMSFQHGX2MiCZFvG6QZdoS2Ux55g_o7uQ0177', access_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6Im9OeUxUdTAzVCswc0pJbk…HNlfQ.aU4uOYsdYQUaXndQ7GVBLSj4Min_EjDC_yIhifTposo', expires_in: 3600, expires_at: 1741965464, refresh_token: '7yeq_3M56J3UfmCflh7vjw', …}
+index-7unu3ls5.js:618 Auth state changed: INITIAL_SESSION
+index-7unu3ls5.js:618 
+            
+            
+           GET https://tccxjcddzwnpfpnmekgq.supabase.co/rest/v1/bookings?select=* 500 (Internal Server Error)
+(anonymous) @ index-7unu3ls5.js:618
+(anonymous) @ index-7unu3ls5.js:618
+l @ index-7unu3ls5.js:618
+Promise.then
+u @ index-7unu3ls5.js:618
+(anonymous) @ index-7unu3ls5.js:618
+tce @ index-7unu3ls5.js:618
+(anonymous) @ index-7unu3ls5.js:618
+then @ index-7unu3ls5.js:613Understand this errorAI
+index-7unu3ls5.js:829 Error fetching bookings: {code: '42P17', details: null, hint: null, message: 'infinite recursion detected in policy for relation "bookings"'}
+ett @ index-7unu3ls5.js:829
+await in ett
+(anonymous) @ index-7unu3ls5.js:829
+g1 @ index-7unu3ls5.js:40
+ff @ index-7unu3ls5.js:40
+PR @ index-7unu3ls5.js:40
+uc @ index-7unu3ls5.js:38
+Ete @ index-7unu3ls5.js:40
+$c @ index-7unu3ls5.js:40
+k8 @ index-7unu3ls5.js:40
+S @ index-7unu3ls5.js:25
+O @ index-7unu3ls5.js:25Understand this errorAI
+index-7unu3ls5.js:618 Setting session timeout
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:618 Found Supabase session: {provider_token: 'ya29.a0AeXRPp5LxA5C13YP63FOC5lYPkewjd9E1NG4e7l81ii…OwaCgYKAacSARMSFQHGX2MiCZFvG6QZdoS2Ux55g_o7uQ0177', access_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6Im9OeUxUdTAzVCswc0pJbk…HNlfQ.aU4uOYsdYQUaXndQ7GVBLSj4Min_EjDC_yIhifTposo', expires_in: 3600, expires_at: 1741965464, refresh_token: '7yeq_3M56J3UfmCflh7vjw', …}
+index-7unu3ls5.js:618 Auth state changed: INITIAL_SESSION
+index-7unu3ls5.js:618 User data found: {id: '6ccdbcff-b3b5-4edd-8fd6-20e9cc8e2bc4', email: 'cuong.huynh@eggstech.io', first_name: null, last_name: null, department: null, …}
+index-7unu3ls5.js:618 Setting session timeout
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: false, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:623 Authentication check complete: {isAuthenticated: true, userRole: 'admin'}
+index-7unu3ls5.js:623 User is authenticated, rendering protected content
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+218WebSocket connection to '<URL>' failed: WebSocket is closed before the connection is established.Understand this warningAI
+index-7unu3ls5.js:618 Found Supabase session: {provider_token: 'ya29.a0AeXRPp5LxA5C13YP63FOC5lYPkewjd9E1NG4e7l81ii…OwaCgYKAacSARMSFQHGX2MiCZFvG6QZdoS2Ux55g_o7uQ0177', access_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6Im9OeUxUdTAzVCswc0pJbk…HNlfQ.aU4uOYsdYQUaXndQ7GVBLSj4Min_EjDC_yIhifTposo', expires_in: 3600, expires_at: 1741965464, refresh_token: '7yeq_3M56J3UfmCflh7vjw', …}
+index-7unu3ls5.js:618 Auth state changed: INITIAL_SESSION
+index-7unu3ls5.js:618 User data found: {id: '6ccdbcff-b3b5-4edd-8fd6-20e9cc8e2bc4', email: 'cuong.huynh@eggstech.io', first_name: null, last_name: null, department: null, …}
+index-7unu3ls5.js:618 Setting session timeout
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: false, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:623 Authentication check complete: {isAuthenticated: true, userRole: 'admin'}
+index-7unu3ls5.js:623 User is authenticated, rendering protected content
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:618 Found Supabase session: {provider_token: 'ya29.a0AeXRPp5LxA5C13YP63FOC5lYPkewjd9E1NG4e7l81ii…OwaCgYKAacSARMSFQHGX2MiCZFvG6QZdoS2Ux55g_o7uQ0177', access_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6Im9OeUxUdTAzVCswc0pJbk…HNlfQ.aU4uOYsdYQUaXndQ7GVBLSj4Min_EjDC_yIhifTposo', expires_in: 3600, expires_at: 1741965464, refresh_token: '7yeq_3M56J3UfmCflh7vjw', …}
+index-7unu3ls5.js:618 Auth state changed: INITIAL_SESSION
+index-7unu3ls5.js:618 User data found: {id: '6ccdbcff-b3b5-4edd-8fd6-20e9cc8e2bc4', email: 'cuong.huynh@eggstech.io', first_name: null, last_name: null, department: null, …}
+index-7unu3ls5.js:618 Setting session timeout
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: false, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:623 Authentication check complete: {isAuthenticated: true, userRole: 'admin'}
+index-7unu3ls5.js:623 User is authenticated, rendering protected content
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:618 Found Supabase session: {provider_token: 'ya29.a0AeXRPp5LxA5C13YP63FOC5lYPkewjd9E1NG4e7l81ii…OwaCgYKAacSARMSFQHGX2MiCZFvG6QZdoS2Ux55g_o7uQ0177', access_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6Im9OeUxUdTAzVCswc0pJbk…HNlfQ.aU4uOYsdYQUaXndQ7GVBLSj4Min_EjDC_yIhifTposo', expires_in: 3600, expires_at: 1741965464, refresh_token: '7yeq_3M56J3UfmCflh7vjw', …}
+index-7unu3ls5.js:618 Auth state changed: INITIAL_SESSION
+index-7unu3ls5.js:618 User data found: {id: '6ccdbcff-b3b5-4edd-8fd6-20e9cc8e2bc4', email: 'cuong.huynh@eggstech.io', first_name: null, last_name: null, department: null, …}
+index-7unu3ls5.js:618 Setting session timeout
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: false, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:623 Authentication check complete: {isAuthenticated: true, userRole: 'admin'}
+index-7unu3ls5.js:623 User is authenticated, rendering protected content
+index-7unu3ls5.js:623 PrivateRoute rendering with: {isLoading: true, isAuthenticated: true, currentPath: '/dashboard', user: 'User exists'}
+index-7unu3ls5.js:618 Found Supabase session: {provider_token: 'ya29.a0AeXRPp5LxA5C13YP63FOC5lYPkewjd9E1NG4e7l81ii…OwaCgYKAacSARMSFQHGX2MiCZFvG6QZdoS2Ux55g_o7uQ0177', access_token: 'eyJhbGciOiJIUzI1NiIsImtpZCI6Im9OeUxUdTAzVCswc0pJbk…HNlfQ.aU4uOYsdYQUaXndQ7GVBLSj4Min_EjDC_yIhifTposo', expires_in: 3600, expires_at: 1741965464, refresh_token: '7yeq_3M56J3UfmCflh7vjw', …}
+index-7unu3ls5.js:618 Auth state changed: INITIAL_SESSION
+index-7unu3ls5.js:618 User data found: {id: '6ccdbcff-b3b5-4edd-8fd6-20e9cc8e2bc4', email: 'cuong.huynh@eggstech.io', first_name: null, last_name: null, department: null, …}
+index-7unu3ls5.js:618 Setting session timeout

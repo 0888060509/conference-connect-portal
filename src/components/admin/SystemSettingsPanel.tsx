@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +11,7 @@ import { MaintenanceSettings } from "@/components/admin/settings/MaintenanceSett
 import { UserPermissions } from "@/components/admin/settings/UserPermissions";
 import { Button } from "@/components/ui/button";
 import { getSystemSettings, updateSystemSetting } from "@/services/SystemSettingsService";
-import { performHealthCheck, getSystemHealth } from "@/services/SystemHealthService";
+import { performHealthCheck, getSystemHealth, SystemHealthStatus } from "@/services/SystemHealthService";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { getAuditLogs } from "@/services/AuditService";
@@ -28,7 +29,7 @@ export function SystemSettingsPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>({});
-  const [systemHealth, setSystemHealth] = useState<any[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthStatus[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {

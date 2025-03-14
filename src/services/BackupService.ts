@@ -17,25 +17,20 @@ export const getBackupHistory = async (): Promise<BackupRecord[]> => {
   try {
     const { data, error } = await supabase
       .from('backup_history')
-      .select(`
-        *,
-        creator:created_by (
-          id,
-          email,
-          first_name,
-          last_name
-        )
-      `)
+      .select('*')
       .order('backup_date', { ascending: false });
     
     if (error) throw error;
     
     // Cast the response to ensure it matches our expected type
     return data.map(item => ({
-      ...item,
+      id: item.id,
+      backup_name: item.backup_name,
+      backup_size: item.backup_size,
       status: item.status as 'pending' | 'completed' | 'failed',
-      // Remove the creator field as it's not in our BackupRecord type
-      creator: undefined
+      backup_date: item.backup_date,
+      created_by: item.created_by,
+      details: item.details
     }));
   } catch (error) {
     console.error('Failed to fetch backup history:', error);
@@ -102,7 +97,15 @@ export const createBackup = async (backupName: string): Promise<BackupRecord> =>
       }
     }, 3000); // Simulate a 3-second backup process
     
-    return backupRecord;
+    // Return a properly typed backup record
+    return {
+      id: backupRecord.id,
+      backup_name: backupRecord.backup_name,
+      status: backupRecord.status as 'pending' | 'completed' | 'failed',
+      backup_date: backupRecord.backup_date,
+      created_by: backupRecord.created_by,
+      details: backupRecord.details
+    };
   } catch (error) {
     console.error('Failed to create backup:', error);
     toast.error('Failed to create backup');

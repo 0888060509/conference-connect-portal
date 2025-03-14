@@ -21,8 +21,11 @@ export const getSystemHealth = async (): Promise<SystemHealthStatus[]> => {
     
     // Cast the response to ensure it matches our expected type
     return data.map(item => ({
-      ...item,
-      status: item.status as 'healthy' | 'warning' | 'critical' | 'unknown'
+      id: item.id,
+      category: item.category,
+      status: item.status as 'healthy' | 'warning' | 'critical' | 'unknown',
+      details: item.details,
+      last_check: item.last_check
     }));
   } catch (error) {
     console.error('Failed to fetch system health:', error);
@@ -88,7 +91,7 @@ export const performHealthCheck = async (): Promise<void> => {
       .limit(1);
     const dbDuration = performance.now() - dbStart;
     
-    const dbStatus = dbError ? 'critical' : (dbDuration > 1000 ? 'warning' : 'healthy');
+    const dbStatus = dbError ? 'critical' : (dbDuration > 1000 ? 'warning' : 'healthy') as 'healthy' | 'warning' | 'critical';
     
     // Update database health
     await updateSystemHealthStatus('database', dbStatus, {
@@ -101,7 +104,7 @@ export const performHealthCheck = async (): Promise<void> => {
     const { data: authCheck, error: authError } = await supabase.auth.getSession();
     const authDuration = performance.now() - authStart;
     
-    const authStatus = authError ? 'critical' : (authDuration > 1000 ? 'warning' : 'healthy');
+    const authStatus = authError ? 'critical' : (authDuration > 1000 ? 'warning' : 'healthy') as 'healthy' | 'warning' | 'critical';
     
     // Update auth health
     await updateSystemHealthStatus('authentication', authStatus, {
@@ -115,7 +118,9 @@ export const performHealthCheck = async (): Promise<void> => {
     const allHealthy = dbStatus === 'healthy' && authStatus === 'healthy';
     const anyCritical = dbStatus === 'critical' || authStatus === 'critical';
     
-    const overallStatus = anyCritical ? 'critical' : (allHealthy ? 'healthy' : 'warning');
+    const overallStatus = anyCritical 
+      ? 'critical' 
+      : (allHealthy ? 'healthy' : 'warning') as 'healthy' | 'warning' | 'critical';
     
     await updateSystemHealthStatus('overall', overallStatus, {
       components: {

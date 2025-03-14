@@ -1,3 +1,4 @@
+
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
@@ -13,6 +14,13 @@ interface PendingOperation {
   processed: boolean;
 }
 
+// Define a custom DBSchemaValue type to extend the DBSchema with our PendingOperation
+interface PendingOperationsStore {
+  key: number;
+  value: PendingOperation;
+  indexes: { 'by-processed': boolean };
+}
+
 // Define the schema structure for the database
 interface MeetingMasterDB extends DBSchema {
   rooms: {
@@ -25,11 +33,7 @@ interface MeetingMasterDB extends DBSchema {
     value: Booking;
     indexes: { 'by-user': string; 'by-room': string; 'by-start-date': string };
   };
-  pendingOperations: {
-    key: number;
-    value: PendingOperation;
-    indexes: { 'by-processed': boolean };
-  };
+  pendingOperations: PendingOperationsStore;
 }
 
 let dbPromise: Promise<IDBPDatabase<MeetingMasterDB>> | null = null;

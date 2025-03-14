@@ -1,4 +1,3 @@
-
 import { User, UserImpl } from "../types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -116,37 +115,53 @@ export const setupAuthStateChangeListener = (
   });
 };
 
-export const handleExternalAuthUser = async (
-  user: any,
-  setUser: (user: User | null) => void,
-  resetSessionTimeout: () => void
-) => {
+export const handleExternalAuthUser = async (session: any) => {
+  if (!session || !session.user) return null;
+  
+  console.log("Processing external auth user:", session.user);
+  
+  // Check if we need to create or update user profile in our tables
   try {
-    // Fetch user data from our users table
-    const { data: userData, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    // Handle profile data for users coming from OAuth providers
+    const metadata = session.user.user_metadata || {};
+    const avatarUrl = metadata.avatar_url || null;
+    const fullName = metadata.full_name || null;
     
-    if (userData) {
-      const appUser = new UserImpl({
-        id: userData.id,
-        email: userData.email,
-        first_name: userData.first_name || '',
-        last_name: userData.last_name || '',
-        role: userData.role,
-        department: userData.department,
-        created_at: userData.created_at,
-        last_login: userData.last_login,
-        preferences: userData.preferences
-      });
+    console.log("OAuth metadata:", metadata);
+    
+    // Check if we need to update the user profile in our users table
+    if (avatarUrl || fullName) {
+      // Split name if available
+      let firstName = '';
+      let lastName = '';
       
-      setUser(appUser);
-      resetSessionTimeout();
+      if (fullName) {
+        const nameParts = fullName.split(' ');
+        firstName = nameParts[0] || '';
+        lastName = nameParts.slice(1).join(' ') || '';
+      }
+      
+      // Update profile if needed
+      const { error } = await supabase
+        .from('users')
+        .upsert({
+          id: session.user.id,
+          email: session.user.email,
+          first_name: firstName || metadata.first_name || '',
+          last_name: lastName || metadata.last_name || '',
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+      
+      if (error) {
+        console.error("Error updating user profile:", error);
+      }
     }
-  } catch (err) {
-    console.error("Error handling external auth user:", err);
+    
+    return session;
+  } catch (error) {
+    console.error("Error processing external auth user:", error);
+    return session;
   }
 };
 

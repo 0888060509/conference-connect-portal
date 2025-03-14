@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Auth } from '@supabase/auth-ui-react';
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,8 +14,40 @@ interface SupabaseAuthUIProps {
 
 export function SupabaseAuthUI({ redirectTo = '/dashboard', view = 'sign_in' }: SupabaseAuthUIProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [authView, setAuthView] = useState<'sign_in' | 'sign_up' | 'magic_link' | 'forgotten_password'>(view);
+
+  useEffect(() => {
+    // Check if we have a hash parameter from OAuth redirect
+    const handleHashParams = async () => {
+      const hashParams = location.hash;
+      if (hashParams && (hashParams.includes('access_token') || hashParams.includes('error'))) {
+        console.log('Auth redirect detected with hash params:', hashParams);
+        
+        // Let Supabase handle the hash URL
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error processing auth redirect:', error);
+          toast({
+            title: 'Authentication Failed',
+            description: error.message,
+            variant: 'destructive',
+          });
+        } else if (data.session) {
+          console.log('Successfully authenticated after redirect');
+          toast({
+            title: 'Signed in successfully',
+            description: 'Welcome back!',
+          });
+          navigate(redirectTo);
+        }
+      }
+    };
+    
+    handleHashParams();
+  }, [location, navigate, redirectTo, toast]);
 
   useEffect(() => {
     // Check if already authenticated

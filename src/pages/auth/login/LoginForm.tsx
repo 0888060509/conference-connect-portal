@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import DemoCredentials from "./DemoCredentials";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LoginFormProps {
   from: string;
@@ -24,6 +25,39 @@ export default function LoginForm({ from, error, clearError }: LoginFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle OAuth redirects
+  useEffect(() => {
+    const handleRedirect = async () => {
+      // Check if we have a hash parameter from OAuth redirect
+      const hashParams = location.hash;
+      if (hashParams && (hashParams.includes('access_token') || hashParams.includes('error'))) {
+        console.log('Auth redirect detected in LoginForm:', hashParams);
+        setIsGoogleSigningIn(true);
+        clearError();
+        
+        try {
+          // Let Supabase handle the hash URL
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Error processing auth redirect:', error);
+            throw error;
+          } else if (data.session) {
+            console.log('Successfully authenticated after redirect');
+            navigate(from, { replace: true });
+          }
+        } catch (err) {
+          console.error("Error during OAuth redirect handling:", err);
+        } finally {
+          setIsGoogleSigningIn(false);
+        }
+      }
+    };
+    
+    handleRedirect();
+  }, [location, navigate, from, clearError]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

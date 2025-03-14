@@ -1,5 +1,5 @@
 
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, DBSchema, IDBPDatabase, DBSchemaValue } from 'idb';
 import { Booking } from '@/hooks/use-bookings';
 import { Room } from '@/hooks/use-rooms';
 
@@ -30,6 +30,8 @@ export interface MeetingMasterDB extends DBSchema {
     value: PendingOperation;
     indexes: { 'by-processed': boolean };
   };
+  // Add string index signature to make it compatible with DBSchemaValue
+  [key: string]: DBSchemaValue;
 }
 
 let dbPromise: Promise<IDBPDatabase<MeetingMasterDB>> | null = null;

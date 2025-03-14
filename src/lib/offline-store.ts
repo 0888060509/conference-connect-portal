@@ -3,7 +3,7 @@ import { roomOperations } from './offline-store/rooms';
 import { bookingOperations } from './offline-store/bookings';
 import { pendingOperations } from './offline-store/pending-operations';
 import { syncPendingOperations } from './offline-store/sync';
-import { PendingOperation } from './offline-store/db-schema';
+import type { PendingOperation } from './offline-store/db-schema';
 
 // Re-export all the operations
 export const offlineStore = {
@@ -27,4 +27,6 @@ export const offlineStore = {
 };
 
 // Re-export the sync function
-export { syncPendingOperations, PendingOperation };
+export { syncPendingOperations };
+// Re-export the PendingOperation type with the 'export type' syntax
+export type { PendingOperation };

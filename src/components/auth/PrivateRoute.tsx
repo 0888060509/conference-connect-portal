@@ -20,7 +20,31 @@ const PrivateRoute = ({ requireAdmin = false }: PrivateRouteProps) => {
     currentPath: location.pathname,
     user: user ? 'User exists' : 'No user'
   });
+  // Fallback condition for loading state
+  if (isLoading) {
+    console.log("isLoading is stuck, bypassing for debugging");
+    return (
+      <div className="loading-screen">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    console.log("User not authenticated, redirecting to login");
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Redirect if admin access is required but the user is not an admin
+  if (requireAdmin && user?.role !== "admin") {
+    console.log("Admin access required but user is not admin");
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Render the protected content
+  console.log("User is authenticated, rendering protected content");
+  return children;
   // Show a better loading state with progress and skeleton
   if (isLoading) {
     return (

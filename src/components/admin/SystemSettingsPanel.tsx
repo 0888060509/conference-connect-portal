@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AuthSettings } from "./settings/AuthSettings";
 import { BookingSettings } from "./settings/BookingSettings";
@@ -8,8 +9,76 @@ import { MaintenanceSettings } from "./settings/MaintenanceSettings";
 import { DirectoryIntegration } from "./settings/DirectoryIntegration";
 import { UserPermissions } from "./settings/UserPermissions";
 import { SuperAdminSetup } from "./settings/SuperAdminSetup";
+import { supabase } from "@/lib/supabase-client";
+import { toast } from "sonner";
 
 export function SystemSettingsPanel() {
+  const [settings, setSettings] = useState<Record<string, any>>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
+
+  const loadSettings = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Transform array of settings to an object
+      const settingsObj = data.reduce((acc, item) => {
+        try {
+          acc[item.setting_key] = item.setting_value;
+        } catch (e) {
+          console.error(`Error parsing setting ${item.setting_key}:`, e);
+        }
+        return acc;
+      }, {} as Record<string, any>);
+      
+      setSettings(settingsObj);
+    } catch (err) {
+      console.error("Error loading settings:", err);
+      toast.error("Failed to load system settings");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateSetting = async (key: string, value: any) => {
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert({ 
+          setting_key: key, 
+          setting_value: value,
+          updated_at: new Date().toISOString()
+        }, { 
+          onConflict: 'setting_key' 
+        });
+      
+      if (error) throw error;
+      
+      // Update local state
+      setSettings(prev => ({
+        ...prev,
+        [key]: value
+      }));
+      
+      toast.success(`Setting "${key}" updated successfully`);
+    } catch (err) {
+      console.error("Error updating setting:", err);
+      toast.error("Failed to update setting");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="container py-6">
       <h1 className="text-2xl font-bold mb-6">System Settings</h1>
@@ -31,7 +100,10 @@ export function SystemSettingsPanel() {
         </TabsContent>
         
         <TabsContent value="auth">
-          <AuthSettings />
+          <AuthSettings 
+            settings={settings} 
+            onUpdateSetting={updateSetting} 
+          />
         </TabsContent>
         
         <TabsContent value="superadmin">
@@ -39,19 +111,31 @@ export function SystemSettingsPanel() {
         </TabsContent>
         
         <TabsContent value="booking">
-          <BookingSettings />
+          <BookingSettings 
+            settings={settings} 
+            onUpdateSetting={updateSetting} 
+          />
         </TabsContent>
         
         <TabsContent value="notifications">
-          <NotificationSettings />
+          <NotificationSettings 
+            settings={settings} 
+            onUpdateSetting={updateSetting} 
+          />
         </TabsContent>
         
         <TabsContent value="integrations">
-          <IntegrationSettings />
+          <IntegrationSettings 
+            settings={settings} 
+            onUpdateSetting={updateSetting} 
+          />
         </TabsContent>
         
         <TabsContent value="directory">
-          <DirectoryIntegration />
+          <DirectoryIntegration 
+            settings={settings} 
+            onUpdateSetting={updateSetting} 
+          />
         </TabsContent>
         
         <TabsContent value="maintenance">

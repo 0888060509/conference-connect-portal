@@ -79,7 +79,7 @@ export function SuperAdminSetup() {
       
       const { data, error } = await supabase.functions.invoke('auth/superadmin-setup', {
         method: 'DELETE',
-        query: { email }
+        body: { email }  // Use body instead of query for DELETE
       });
       
       if (error) {

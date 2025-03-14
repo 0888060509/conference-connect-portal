@@ -29,7 +29,7 @@ interface MeetingMasterDB extends DBSchema {
     key: number;
     value: PendingOperation;
     indexes: { 'by-processed': boolean };
-  } & Record<string, any>;
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<MeetingMasterDB>> | null = null;

@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Define logout function ahead to use in useSessionTimeout hook
   const logout = useCallback(async () => {
-    await logoutUser(sessionTimeout, setUser, setSessionTimeoutState);
+    await logoutUser(null, setUser, setSessionTimeoutState); // Changed from sessionTimeout to null
     toast.success("You've been signed out successfully");
   }, []);
 

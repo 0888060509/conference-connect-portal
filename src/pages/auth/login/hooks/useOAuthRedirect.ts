@@ -52,6 +52,7 @@ export const useOAuthRedirect = ({
             console.error('Error processing auth redirect:', error);
             setLocalError(error.message);
             toast.error("Authentication failed: " + error.message);
+            setIsProcessing(false);
           } else if (data.session) {
             console.log('Successfully authenticated after redirect, session found');
             toast.success("Successfully signed in!");
@@ -63,6 +64,7 @@ export const useOAuthRedirect = ({
             // Use a short timeout to allow the auth state to settle
             setTimeout(() => {
               navigate(destination, { replace: true });
+              setIsProcessing(false);
             }, 100);
           } else {
             console.log('No session found after redirect');
@@ -75,14 +77,15 @@ export const useOAuthRedirect = ({
               setLocalError("Authentication failed: No session found");
               toast.error("Authentication failed: No session found");
             }
+            setIsProcessing(false);
           }
         } catch (err: any) {
           console.error("Error during OAuth redirect handling:", err);
           setLocalError(err?.message || "Authentication failed");
           toast.error("Authentication failed: " + (err?.message || "Unknown error"));
+          setIsProcessing(false);
         } finally {
           setIsGoogleSigningIn(false);
-          setIsProcessing(false);
           isHandling = false;
         }
       }
@@ -92,7 +95,7 @@ export const useOAuthRedirect = ({
     
     // Cleanup function
     return () => {
-      setIsProcessing(false);
+      // No need for additional cleanup
     };
   }, [location, navigate, from, clearError, isProcessing]);
 

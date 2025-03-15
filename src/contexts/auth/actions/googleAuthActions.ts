@@ -32,6 +32,8 @@ export const signInWithGoogleAuth = async (
     
     if (error) {
       console.error("Google sign-in error:", error);
+      setError(error.message);
+      setIsLoading(false);
       throw error;
     }
     

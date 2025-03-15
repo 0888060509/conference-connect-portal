@@ -8,6 +8,7 @@ interface PrivateRouteProps {
 export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate(); // Added useNavigate hook
 
   //Improved loading state handling to prevent redirect loops.
   useEffect(() => {
@@ -19,8 +20,6 @@ export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps
   if (isLoading) {
     return <div>Loading...</div>;
   }
-
-  return isAuthenticated ? children : null;
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;

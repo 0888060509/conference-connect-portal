@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Location } from "react-router-dom";
 import { supabase } from "@/lib/supabase-client";
@@ -21,22 +20,24 @@ export const useOAuthRedirect = ({
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isHandling = false;
     const handleRedirect = async () => {
-      // Check if we have a hash parameter from OAuth redirect
+      if (isHandling) return;
+      isHandling = true;
       const hashParams = location.hash;
       const queryParams = new URLSearchParams(location.search);
-      
+
       if ((hashParams && (hashParams.includes('access_token') || hashParams.includes('error'))) || 
           queryParams.has('error_description')) {
-        
+
         console.log('Auth redirect detected in LoginForm. Hash:', hashParams, 'Query:', location.search);
         setIsGoogleSigningIn(true);
         clearError();
-        
+
         try {
           // Let Supabase handle the hash URL
           const { data, error } = await supabase.auth.getSession();
-          
+
           if (error) {
             console.error('Error processing auth redirect:', error);
             setLocalError(error.message);
@@ -47,7 +48,7 @@ export const useOAuthRedirect = ({
             navigate('/', { replace: true });
           } else {
             console.log('No session found after redirect');
-            
+
             if (queryParams.has('error_description')) {
               const errorDesc = queryParams.get('error_description');
               setLocalError(`Authentication failed: ${errorDesc}`);
@@ -63,10 +64,11 @@ export const useOAuthRedirect = ({
           toast.error("Authentication failed: " + (err?.message || "Unknown error"));
         } finally {
           setIsGoogleSigningIn(false);
+          isHandling = false;
         }
       }
     };
-    
+
     handleRedirect();
   }, [location, navigate, from, clearError]);
 

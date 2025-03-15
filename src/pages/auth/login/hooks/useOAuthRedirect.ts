@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Location } from "react-router-dom";
 import { supabase } from "@/lib/supabase-client";
 import { toast } from "sonner";
+import { processGoogleAuthUserData } from "@/contexts/auth/actions/googleAuthActions";
 
 interface UseOAuthRedirectParams {
   location: Location;
@@ -19,15 +20,15 @@ export const useOAuthRedirect = ({
 }: UseOAuthRedirectParams) => {
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     // Flag to prevent multiple executions
     let isHandling = false;
 
     const handleRedirect = async () => {
-      if (isHandling) return;
-      isHandling = true;
-
+      if (isHandling || isProcessing) return;
+      
       const hashParams = location.hash;
       const queryParams = new URLSearchParams(location.search);
 
@@ -36,9 +37,14 @@ export const useOAuthRedirect = ({
 
         console.log('Auth redirect detected. Hash:', hashParams, 'Query:', location.search);
         setIsGoogleSigningIn(true);
+        setIsProcessing(true);
+        isHandling = true;
         clearError();
 
         try {
+          // Process Google auth metadata
+          await processGoogleAuthUserData();
+          
           // Get the current session after the redirect
           const { data, error } = await supabase.auth.getSession();
 
@@ -76,13 +82,19 @@ export const useOAuthRedirect = ({
           toast.error("Authentication failed: " + (err?.message || "Unknown error"));
         } finally {
           setIsGoogleSigningIn(false);
+          setIsProcessing(false);
           isHandling = false;
         }
       }
     };
 
     handleRedirect();
-  }, [location, navigate, from, clearError]);
+    
+    // Cleanup function
+    return () => {
+      setIsProcessing(false);
+    };
+  }, [location, navigate, from, clearError, isProcessing]);
 
   return {
     isGoogleSigningIn, 

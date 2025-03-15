@@ -5,7 +5,8 @@ import {
   loginWithCredentials, 
   logoutUser, 
   resetUserPassword, 
-  signInWithGoogleAuth 
+  signInWithGoogleAuth,
+  processGoogleAuthUserData
 } from "./actions";
 import { 
   initializeAuthState,
@@ -21,6 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessingAuth, setIsProcessingAuth] = useState<boolean>(false);
 
   // Define logout function ahead to use in useSessionTimeout hook
   const logout = useCallback(async () => {
@@ -38,13 +40,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check for stored user on initial load
   useEffect(() => {
     const initAuth = async () => {
+      if (isProcessingAuth) return;
+      setIsProcessingAuth(true);
       setIsLoading(true);
+      
       try {
         // First, check for a Supabase session
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
           console.log("Found Supabase session:", session);
+          
+          // Process Google auth data if present
+          await processGoogleAuthUserData();
           
           // Get user data from Supabase
           const { data: userData, error: userError } = await supabase
@@ -69,6 +77,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("Error during auth initialization:", err);
         setIsLoading(false); // Ensure loading state is updated even if there's an error
         initializeAuthState(setUser, resetSessionTimeout, setIsLoading);
+      } finally {
+        setIsProcessingAuth(false);
       }
     };
     

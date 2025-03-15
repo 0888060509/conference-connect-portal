@@ -1,7 +1,7 @@
 
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface PrivateRouteProps {
   requireAdmin?: boolean;
@@ -11,6 +11,17 @@ export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps
   const { isAuthenticated, isLoading, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [renderCount, setRenderCount] = useState(0);
+
+  // Log the render count to identify infinite loops
+  useEffect(() => {
+    setRenderCount(prev => prev + 1);
+    console.log(`PrivateRoute rendering count: ${renderCount + 1}`);
+    
+    if (renderCount > 10) {
+      console.warn("PrivateRoute rendering too many times - possible infinite loop");
+    }
+  }, [renderCount]);
 
   console.log("PrivateRoute rendering with:", {
     isLoading,
@@ -19,13 +30,11 @@ export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps
     user: user ? 'User exists' : 'No user'
   });
 
-  useEffect(() => {
-    // Only redirect if not loading and not authenticated
-    if (!isLoading && !isAuthenticated) {
-      console.log("Not authenticated, redirecting to login");
-      navigate('/login', { state: { from: location.pathname }, replace: true });
-    }
-  }, [isLoading, isAuthenticated, navigate, location.pathname]);
+  // Only redirect if not loading and not authenticated
+  if (!isLoading && !isAuthenticated) {
+    console.log("Not authenticated, redirecting to login");
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
 
   // Show loading state while authentication is being checked
   if (isLoading) {
@@ -54,12 +63,6 @@ export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps
         </div>
       </div>
     );
-  }
-
-  // Handle case where user is not authenticated (should be redirected by useEffect)
-  if (!isAuthenticated) {
-    console.log("Authentication check complete: ", { isAuthenticated: false });
-    return null; // The useEffect will handle the redirect
   }
 
   // Check if admin is required but user is not an admin

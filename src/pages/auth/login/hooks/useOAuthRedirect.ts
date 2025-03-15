@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, Location } from "react-router-dom";
 import { supabase } from "@/lib/supabase-client";
@@ -20,22 +21,25 @@ export const useOAuthRedirect = ({
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Flag to prevent multiple executions
     let isHandling = false;
+
     const handleRedirect = async () => {
       if (isHandling) return;
       isHandling = true;
+
       const hashParams = location.hash;
       const queryParams = new URLSearchParams(location.search);
 
       if ((hashParams && (hashParams.includes('access_token') || hashParams.includes('error'))) || 
           queryParams.has('error_description')) {
 
-        console.log('Auth redirect detected in LoginForm. Hash:', hashParams, 'Query:', location.search);
+        console.log('Auth redirect detected. Hash:', hashParams, 'Query:', location.search);
         setIsGoogleSigningIn(true);
         clearError();
 
         try {
-          // Let Supabase handle the hash URL
+          // Get the current session after the redirect
           const { data, error } = await supabase.auth.getSession();
 
           if (error) {
@@ -43,9 +47,17 @@ export const useOAuthRedirect = ({
             setLocalError(error.message);
             toast.error("Authentication failed: " + error.message);
           } else if (data.session) {
-            console.log('Successfully authenticated after redirect');
+            console.log('Successfully authenticated after redirect, session found');
             toast.success("Successfully signed in!");
-            navigate('/', { replace: true });
+            
+            // Redirect to the dashboard or original destination
+            const destination = from || '/dashboard';
+            console.log(`Redirecting to ${destination}`);
+            
+            // Use a short timeout to allow the auth state to settle
+            setTimeout(() => {
+              navigate(destination, { replace: true });
+            }, 100);
           } else {
             console.log('No session found after redirect');
 

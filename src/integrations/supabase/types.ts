@@ -217,6 +217,33 @@ export type Database = {
           },
         ]
       }
+      broadcast_messages: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: number
+          message: string | null
+          sender_id: number | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: number
+          message?: string | null
+          sender_id?: number | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: number
+          message?: string | null
+          sender_id?: number | null
+          type?: string | null
+        }
+        Relationships: []
+      }
       directory_integrations: {
         Row: {
           config: Json
@@ -864,6 +891,7 @@ export type Database = {
           id: string
           last_login: string | null
           last_name: string | null
+          password: string
           preferences: Json | null
           role: Database["public"]["Enums"]["user_role"]
         }
@@ -875,6 +903,7 @@ export type Database = {
           id?: string
           last_login?: string | null
           last_name?: string | null
+          password?: string
           preferences?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
         }
@@ -886,6 +915,7 @@ export type Database = {
           id?: string
           last_login?: string | null
           last_name?: string | null
+          password?: string
           preferences?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
         }

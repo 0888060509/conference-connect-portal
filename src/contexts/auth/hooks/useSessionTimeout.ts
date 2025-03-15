@@ -1,43 +1,58 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { setSessionTimeout } from '../utils/sessionUtils';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { User } from "../types";
+import { SESSION_TIMEOUT_DURATION } from "../utils/sessionUtils";
 
-export const useSessionTimeout = (user: any, logoutFn: () => void) => {
-  const [sessionTimeout, setSessionTimeoutState] = useState<NodeJS.Timeout | null>(null);
+export const useSessionTimeout = (user: User | null, logout: () => Promise<void>) => {
+  const [sessionTimeoutState, setSessionTimeoutState] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reset session timeout
-  const resetSessionTimeout = useCallback(() => {
-    // Clear existing timeout
-    if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
+  const clearTimeoutRef = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+      console.log("Session timeout cleared");
     }
-    
-    const newTimeout = setSessionTimeout(() => {
-      logoutFn();
-    });
-    
-    setSessionTimeoutState(newTimeout);
-  }, [sessionTimeout, logoutFn]);
+  }, []);
 
-  // Set up activity listeners to reset session timeout
-  
+  const resetSessionTimeout = useCallback(() => {
+    // Clear any existing timeout
+    clearTimeoutRef();
+
+    // If user is logged in, set a new timeout
+    if (user) {
+      console.log("Setting session timeout");
+      
+      // Set the new timeout
+      timeoutRef.current = setTimeout(() => {
+        console.log("Session timeout triggered, logging out");
+        setSessionTimeoutState(true);
+        logout();
+      }, SESSION_TIMEOUT_DURATION);
+    }
+  }, [user, logout, clearTimeoutRef]);
+
+  // Clear the timeout on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeoutRef();
+    };
+  }, [clearTimeoutRef]);
+
+  // Reset the timeout when the user changes
   useEffect(() => {
     if (user) {
-      // Reset timeout on user activity
-      const activityEvents = ["mousedown", "keydown", "touchstart", "scroll"];
-      const resetTimeout = () => resetSessionTimeout();
-      
-      activityEvents.forEach(event => {
-        window.addEventListener(event, resetTimeout);
-      });
-      
-      return () => {
-        activityEvents.forEach(event => {
-          window.removeEventListener(event, resetTimeout);
-        });
-      };
+      resetSessionTimeout();
+    } else {
+      clearTimeoutRef();
     }
-  }, [user, resetSessionTimeout]);
+    
+    // This is important: only run when user changes
+  }, [user, resetSessionTimeout, clearTimeoutRef]);
 
-  return { sessionTimeout, setSessionTimeoutState, resetSessionTimeout };
+  return {
+    sessionTimeout: sessionTimeoutState,
+    setSessionTimeoutState,
+    resetSessionTimeout
+  };
 };

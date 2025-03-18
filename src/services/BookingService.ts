@@ -459,7 +459,7 @@ export const cancelBooking = async (bookingId: string): Promise<void> => {
 /**
  * Get a user's bookings
  */
-export const getUserBookings = async (status?: string): Promise<Booking[]> => {
+export const getUserBookings = async (status?: 'confirmed' | 'cancelled' | 'completed'): Promise<Booking[]> => {
   try {
     let query = supabase
       .from('bookings')

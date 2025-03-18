@@ -10,14 +10,35 @@ import { toast } from "sonner";
 import { Booking, cancelBooking, getUserBookings } from "@/services/BookingService";
 import { Link } from "react-router-dom";
 
-export function BookingsList() {
+export interface BookingsListProps {
+  bookings?: Booking[];
+  onCancel?: (bookingId: string, reason?: string) => void;
+  onCheckIn?: (bookingId: string) => void;
+  onCheckOut?: (bookingId: string) => void;
+  onDuplicate?: (bookingId: string) => void;
+  onShare?: (bookingId: string, method: 'email' | 'calendar') => void;
+  onSetReminder?: (bookingId: string, minutes?: number) => void;
+}
+
+export function BookingsList({
+  bookings: externalBookings,
+  onCancel: externalCancelHandler,
+  onCheckIn,
+  onCheckOut,
+  onDuplicate,
+  onShare,
+  onSetReminder
+}: BookingsListProps = {}) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [pastBookings, setPastBookings] = useState<Booking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!externalBookings);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
   const loadBookings = async () => {
+    // Skip loading if bookings are provided externally
+    if (externalBookings) return;
+    
     try {
       setIsLoading(true);
       const allBookings = await getUserBookings();
@@ -37,15 +58,29 @@ export function BookingsList() {
   };
 
   useEffect(() => {
-    loadBookings();
-  }, []);
+    if (externalBookings) {
+      const now = new Date();
+      const upcoming = externalBookings.filter(booking => booking.endTime > now);
+      const past = externalBookings.filter(booking => booking.endTime <= now);
+      
+      setBookings(upcoming);
+      setPastBookings(past);
+      setIsLoading(false);
+    } else {
+      loadBookings();
+    }
+  }, [externalBookings]);
 
   const handleCancelBooking = async () => {
     if (!selectedBooking) return;
     
     try {
-      await cancelBooking(selectedBooking.id);
-      loadBookings();
+      if (externalCancelHandler) {
+        await externalCancelHandler(selectedBooking.id);
+      } else {
+        await cancelBooking(selectedBooking.id);
+        loadBookings();
+      }
       setCancelDialogOpen(false);
     } catch (error) {
       console.error("Error canceling booking:", error);
@@ -128,7 +163,6 @@ export function BookingsList() {
               <p className="text-muted-foreground">
                 You don't have any upcoming bookings. Book a room to get started.
               </p>
-              {/* Fixed this line - replaced href with as={Link} to */}
               <Button className="mt-4" asChild>
                 <Link to="/bookings" className="mt-4">Book a Room</Link>
               </Button>

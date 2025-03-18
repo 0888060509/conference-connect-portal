@@ -1,7 +1,7 @@
 
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 // Development bypass flag - set to true to bypass authentication
 const BYPASS_AUTH = true;
@@ -15,24 +15,21 @@ export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps
   const location = useLocation();
   const navigate = useNavigate();
   const [renderCount, setRenderCount] = useState(0);
+  const loggingDone = useRef(false);
 
-  // Log the render count to identify infinite loops
+  // Log only once per component instance to avoid infinite loops
   useEffect(() => {
-    setRenderCount(prev => prev + 1);
-    console.log(`PrivateRoute rendering count: ${renderCount + 1}`);
-    
-    if (renderCount > 10) {
-      console.warn("PrivateRoute rendering too many times - possible infinite loop");
+    if (!loggingDone.current) {
+      console.log("PrivateRoute rendering with:", {
+        isLoading,
+        isAuthenticated,
+        currentPath: location.pathname,
+        user: user ? 'User exists' : 'No user',
+        bypassEnabled: BYPASS_AUTH
+      });
+      loggingDone.current = true;
     }
-  }, [renderCount]);
-
-  console.log("PrivateRoute rendering with:", {
-    isLoading,
-    isAuthenticated,
-    currentPath: location.pathname,
-    user: user ? 'User exists' : 'No user',
-    bypassEnabled: BYPASS_AUTH
-  });
+  }, [isLoading, isAuthenticated, location.pathname, user]);
 
   // Allow direct access if bypass is enabled
   if (BYPASS_AUTH) {

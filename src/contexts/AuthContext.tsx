@@ -1,5 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Define user roles
 export type UserRole = "user" | "admin";
@@ -27,143 +29,130 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data (in a real app, this would come from a backend)
-const MOCK_USERS: User[] = [
-  {
-    id: "1",
-    email: "admin@example.com",
-    name: "Admin User",
-    role: "admin",
-    department: "IT",
-    position: "System Administrator"
-  },
-  {
-    id: "2",
-    email: "user@example.com",
-    name: "Regular User",
-    role: "user",
-    department: "Marketing",
-    position: "Marketing Specialist"
-  }
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [sessionTimeout, setSessionTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Check for stored user on initial load
+  // Check for stored session on initial load
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const storedUser = localStorage.getItem("meetingmaster_user");
-        const storedExpiry = localStorage.getItem("meetingmaster_session_expiry");
+        setIsLoading(true);
         
-        if (storedUser && storedExpiry) {
-          const expiryTime = parseInt(storedExpiry, 10);
-          
-          // Check if session is still valid
-          if (expiryTime > Date.now()) {
-            setUser(JSON.parse(storedUser));
-            resetSessionTimeout();
-          } else {
-            // Session expired
-            localStorage.removeItem("meetingmaster_user");
-            localStorage.removeItem("meetingmaster_session_expiry");
+        // Get session from Supabase
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session) {
+          // Get user data from the database
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (userError) {
+            console.error("Error fetching user data:", userError);
+            setUser(null);
+          } else if (userData) {
+            // Map the database user to our User interface
+            setUser({
+              id: userData.id,
+              email: userData.email,
+              name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+              role: userData.role as UserRole,
+              department: userData.department,
+              position: userData.position
+            });
           }
+        } else {
+          setUser(null);
         }
       } catch (e) {
         console.error("Auth initialization error:", e);
+        setUser(null);
       } finally {
         // Ensure loading state is resolved
         setIsLoading(false);
       }
     };
     
-    // Simulate network delay to make loading state visible
-    setTimeout(checkAuth, 1000);
+    // Setup auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // Get user data when signed in
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (userError) {
+            console.error("Error fetching user data:", userError);
+          } else if (userData) {
+            setUser({
+              id: userData.id,
+              email: userData.email,
+              name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+              role: userData.role as UserRole,
+              department: userData.department,
+              position: userData.position
+            });
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      }
+    );
+    
+    checkAuth();
+    
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
-
-  // Set up activity listeners to reset session timeout
-  useEffect(() => {
-    if (user) {
-      // Reset timeout on user activity
-      const activityEvents = ["mousedown", "keydown", "touchstart", "scroll"];
-      const resetTimeout = () => resetSessionTimeout();
-      
-      activityEvents.forEach(event => {
-        window.addEventListener(event, resetTimeout);
-      });
-      
-      return () => {
-        activityEvents.forEach(event => {
-          window.removeEventListener(event, resetTimeout);
-        });
-      };
-    }
-  }, [user]);
-
-  const resetSessionTimeout = () => {
-    // Clear existing timeout
-    if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
-    }
-    
-    // Set new timeout (30 minutes = 1800000 ms)
-    const newTimeout = setTimeout(() => {
-      logout();
-    }, 1800000);
-    
-    setSessionTimeout(newTimeout);
-    
-    // Update session expiry time
-    localStorage.setItem("meetingmaster_session_expiry", (Date.now() + 1800000).toString());
-  };
 
   const login = async (email: string, password: string, remember = false) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // Mock authentication (in a real app, this would validate against a backend)
-      const foundUser = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
-      if (foundUser && password === "password") { // Mock password check
-        setUser(foundUser);
-        
-        // Store user if "remember me" is checked
-        if (remember) {
-          localStorage.setItem("meetingmaster_user", JSON.stringify(foundUser));
-        }
-        
-        // Set session expiry
-        resetSessionTimeout();
-      } else {
-        throw new Error("Invalid email or password");
+      if (signInError) {
+        throw new Error(signInError.message);
       }
+      
+      if (!data.session) {
+        throw new Error("Failed to sign in");
+      }
+      
+      // User data is already set via the auth state change listener
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
+      toast.error(err instanceof Error ? err.message : "Login failed");
+      throw err;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    
-    // Clear session timeout
-    if (sessionTimeout) {
-      clearTimeout(sessionTimeout);
-      setSessionTimeout(null);
+  const logout = async () => {
+    setIsLoading(true);
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Clear stored data
-    localStorage.removeItem("meetingmaster_user");
-    localStorage.removeItem("meetingmaster_session_expiry");
   };
 
   const resetPassword = async (email: string) => {
@@ -171,21 +160,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       
-      const foundUser = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
-      if (!foundUser) {
-        throw new Error("No account found with this email address");
+      if (resetError) {
+        throw new Error(resetError.message);
       }
       
-      // In a real app, this would send a reset email
-      console.log(`Password reset requested for ${email}`);
+      toast.success("Password reset email sent. Check your inbox.");
       
       return Promise.resolve();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
+      toast.error(errorMessage);
       return Promise.reject(err);
     } finally {
       setIsLoading(false);

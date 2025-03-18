@@ -36,7 +36,7 @@ export interface Booking {
   description?: string;
   startTime: Date;
   endTime: Date;
-  status: 'confirmed' | 'cancelled' | 'pending';
+  status: 'confirmed' | 'cancelled' | 'pending' | 'completed';
   attendees?: Attendee[];
   roomName?: string;
   location?: string;
@@ -218,6 +218,14 @@ export const createBooking = async (bookingData: BookingFormData): Promise<Booki
     const startDateTime = new Date(`${bookingData.date.toISOString().split('T')[0]}T${bookingData.startTime}`);
     const endDateTime = new Date(`${bookingData.date.toISOString().split('T')[0]}T${bookingData.endTime}`);
 
+    // Get the current user's ID
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error('You must be logged in to create a booking');
+      throw new Error('User not authenticated');
+    }
+
     // Insert the booking
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -227,7 +235,8 @@ export const createBooking = async (bookingData: BookingFormData): Promise<Booki
         description: bookingData.description,
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString(),
-        status: 'confirmed'
+        status: 'confirmed',
+        user_id: user.id
       })
       .select()
       .single();
@@ -255,7 +264,7 @@ export const createBooking = async (bookingData: BookingFormData): Promise<Booki
         const attendeeRecords = users.map(user => ({
           booking_id: booking.id,
           user_id: user.id,
-          status: 'invited'
+          status: 'invited' as 'invited' | 'confirmed' | 'declined'
         }));
 
         const { error: attendeesError } = await supabase
@@ -401,7 +410,7 @@ export const updateBooking = async (
           const attendeeRecords = users.map(user => ({
             booking_id: bookingId,
             user_id: user.id,
-            status: 'invited'
+            status: 'invited' as 'invited' | 'confirmed' | 'declined'
           }));
 
           const { error: attendeesError } = await supabase
@@ -431,7 +440,7 @@ export const cancelBooking = async (bookingId: string): Promise<void> => {
   try {
     const { error } = await supabase
       .from('bookings')
-      .update({ status: 'cancelled' })
+      .update({ status: 'cancelled' as 'confirmed' | 'cancelled' | 'completed' })
       .eq('id', bookingId);
 
     if (error) {
@@ -487,17 +496,19 @@ export const getUserBookings = async (status?: string): Promise<Booking[]> => {
     }
 
     // Transform the data to match our interface
-    return data.map(booking => ({
+    const transformedBookings: Booking[] = data.map(booking => ({
       id: booking.id,
       roomId: booking.room_id,
       title: booking.title,
       description: booking.description,
       startTime: new Date(booking.start_time),
       endTime: new Date(booking.end_time),
-      status: booking.status,
+      status: booking.status as 'confirmed' | 'cancelled' | 'pending' | 'completed',
       roomName: booking.rooms?.name,
       location: booking.rooms ? `${booking.rooms.building}, ${booking.rooms.floor}` : undefined
     }));
+
+    return transformedBookings;
   } catch (error) {
     console.error('Error in getUserBookings:', error);
     toast.error('Failed to fetch bookings');
@@ -549,7 +560,7 @@ export const getBookingById = async (bookingId: string): Promise<Booking> => {
       id: attendee.user_id,
       email: attendee.users.email,
       name: `${attendee.users.first_name || ''} ${attendee.users.last_name || ''}`.trim(),
-      status: attendee.status
+      status: attendee.status as 'invited' | 'confirmed' | 'declined'
     })) || [];
 
     return {
@@ -559,7 +570,7 @@ export const getBookingById = async (bookingId: string): Promise<Booking> => {
       description: booking.description,
       startTime: new Date(booking.start_time),
       endTime: new Date(booking.end_time),
-      status: booking.status,
+      status: booking.status as 'confirmed' | 'cancelled' | 'pending' | 'completed',
       attendees,
       roomName: booking.rooms?.name,
       location: booking.rooms ? `${booking.rooms.building}, ${booking.rooms.floor}` : undefined

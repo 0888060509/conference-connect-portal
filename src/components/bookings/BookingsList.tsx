@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Booking, cancelBooking, getUserBookings } from "@/services/BookingService";
+import { Link } from "react-router-dom";
 
 export function BookingsList() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -127,7 +128,10 @@ export function BookingsList() {
               <p className="text-muted-foreground">
                 You don't have any upcoming bookings. Book a room to get started.
               </p>
-              <Button className="mt-4" href="/bookings">Book a Room</Button>
+              {/* Fixed this line - replaced href with as={Link} to */}
+              <Button className="mt-4" asChild>
+                <Link to="/bookings" className="mt-4">Book a Room</Link>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

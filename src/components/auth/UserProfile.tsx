@@ -61,12 +61,6 @@ export function UserProfile() {
                 <div className="font-medium mt-1">{user.department}</div>
               </div>
             )}
-            {user.position && (
-              <div>
-                <Label>Position</Label>
-                <div className="font-medium mt-1">{user.position}</div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookingsList } from "./BookingsList";
@@ -20,6 +19,7 @@ import {
   sendPushNotification,
   scheduleReminder
 } from "@/services/NotificationService";
+import { Booking as BookingServiceType } from "@/services/BookingService";
 
 // Booking status types
 export type BookingStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
@@ -32,8 +32,8 @@ export interface Booking {
   roomId: number;
   roomName: string;
   location: string;
-  start: Date;
-  end: Date;
+  startTime: Date;
+  endTime: Date;
   attendees: { id: string; name: string; email: string }[];
   status: BookingStatus;
   isRecurring: boolean;
@@ -48,6 +48,21 @@ export interface Booking {
   checkedOutAt?: Date;
 }
 
+// Helper function to convert our local Booking type to BookingService type
+const convertToServiceBooking = (booking: Booking): BookingServiceType => {
+  return {
+    id: booking.id,
+    roomId: String(booking.roomId),
+    title: booking.title,
+    description: booking.description,
+    startTime: booking.startTime,
+    endTime: booking.endTime,
+    status: booking.status === "ongoing" ? "confirmed" : booking.status,
+    roomName: booking.roomName,
+    location: booking.location
+  };
+};
+
 // Mock bookings data
 const MOCK_BOOKINGS: Booking[] = [
   {
@@ -57,8 +72,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 1,
     roomName: "Conference Room A",
     location: "Floor 3",
-    start: new Date(new Date().setHours(10, 0, 0, 0)),
-    end: new Date(new Date().setHours(11, 0, 0, 0)),
+    startTime: new Date(new Date().setHours(10, 0, 0, 0)),
+    endTime: new Date(new Date().setHours(11, 0, 0, 0)),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "2", name: "John Doe", email: "john@example.com" },
@@ -79,8 +94,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 2,
     roomName: "Meeting Room 101",
     location: "Floor 2",
-    start: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(14, 0, 0, 0)),
-    end: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(15, 30, 0, 0)),
+    startTime: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(14, 0, 0, 0)),
+    endTime: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(15, 30, 0, 0)),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "4", name: "Michael Johnson", email: "michael@example.com" },
@@ -100,8 +115,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 3,
     roomName: "Executive Boardroom",
     location: "Floor 5",
-    start: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(9, 0, 0, 0)),
-    end: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 0, 0, 0)),
+    startTime: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(9, 0, 0, 0)),
+    endTime: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 0, 0, 0)),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "6", name: "David Brown", email: "david@example.com" },
@@ -124,8 +139,8 @@ const MOCK_BOOKINGS: Booking[] = [
     roomId: 4,
     roomName: "Meeting Room 102",
     location: "Floor 2",
-    start: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(13, 0, 0, 0)),
-    end: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(14, 0, 0, 0)),
+    startTime: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(13, 0, 0, 0)),
+    endTime: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(14, 0, 0, 0)),
     attendees: [
       { id: "1", name: "You", email: "you@example.com" },
       { id: "7", name: "Emma Wilson", email: "emma@example.com" },
@@ -153,7 +168,6 @@ export function PersonalBookings() {
   const { sendNotification } = useNotifications();
 
   const handleCreateBooking = () => {
-    // This would typically open a modal or navigate to the booking creation page
     toast({
       title: "Create Booking",
       description: "This would open the booking creation form",
@@ -161,11 +175,9 @@ export function PersonalBookings() {
   };
 
   const handleCancelBooking = async (bookingId: string, reason?: string) => {
-    // Find the booking to cancel
     const bookingToCancel = bookings.find(b => b.id === bookingId);
     if (!bookingToCancel) return;
     
-    // Update booking status to cancelled
     const updatedBookings = bookings.map(booking => 
       booking.id === bookingId 
         ? { ...booking, status: 'cancelled' as BookingStatus } 
@@ -175,7 +187,6 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
-    // Send in-app notification
     await sendNotification(
       'booking_cancellation',
       'Booking Cancelled', 
@@ -185,10 +196,8 @@ export function PersonalBookings() {
       bookingId
     );
     
-    // Send email notification
     const emailTemplate = generateBookingCancellationEmail(bookingToCancel, "You", reason);
     
-    // In a real app, this would use the actual user's email
     await sendEmailNotification(
       "you@example.com",
       emailTemplate.subject,
@@ -202,11 +211,9 @@ export function PersonalBookings() {
   };
 
   const handleCheckIn = async (bookingId: string) => {
-    // Find the booking to check in
     const bookingToCheckIn = bookings.find(b => b.id === bookingId);
     if (!bookingToCheckIn) return;
     
-    // Update booking check-in status
     const updatedBookings = bookings.map(booking => 
       booking.id === bookingId 
         ? { 
@@ -221,7 +228,6 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
-    // Send notification
     await sendNotification(
       'booking_modification',
       'Checked In to Meeting', 
@@ -238,11 +244,9 @@ export function PersonalBookings() {
   };
 
   const handleCheckOut = async (bookingId: string) => {
-    // Find the booking to check out
     const bookingToCheckOut = bookings.find(b => b.id === bookingId);
     if (!bookingToCheckOut) return;
     
-    // Update booking check-out status
     const updatedBookings = bookings.map(booking => 
       booking.id === bookingId 
         ? { 
@@ -257,7 +261,6 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
-    // Send notification
     await sendNotification(
       'booking_modification',
       'Checked Out from Meeting', 
@@ -274,19 +277,17 @@ export function PersonalBookings() {
   };
 
   const handleDuplicateBooking = async (bookingId: string) => {
-    // Find the booking to duplicate
     const bookingToDuplicate = bookings.find(b => b.id === bookingId);
     
     if (!bookingToDuplicate) return;
     
-    // Create a new booking based on the existing one
     const nextWeekDate = new Date();
     nextWeekDate.setDate(nextWeekDate.getDate() + 7);
     
-    const startHours = bookingToDuplicate.start.getHours();
-    const startMinutes = bookingToDuplicate.start.getMinutes();
-    const endHours = bookingToDuplicate.end.getHours();
-    const endMinutes = bookingToDuplicate.end.getMinutes();
+    const startHours = bookingToDuplicate.startTime.getHours();
+    const startMinutes = bookingToDuplicate.startTime.getMinutes();
+    const endHours = bookingToDuplicate.endTime.getHours();
+    const endMinutes = bookingToDuplicate.endTime.getMinutes();
     
     const newStartDate = new Date(nextWeekDate);
     newStartDate.setHours(startHours, startMinutes, 0, 0);
@@ -299,8 +300,8 @@ export function PersonalBookings() {
     const newBooking: Booking = {
       ...bookingToDuplicate,
       id: newBookingId,
-      start: newStartDate,
-      end: newEndDate,
+      startTime: newStartDate,
+      endTime: newEndDate,
       status: 'upcoming',
       createdAt: new Date(),
       checkedIn: undefined,
@@ -313,7 +314,6 @@ export function PersonalBookings() {
     setBookings(updatedBookings);
     setFilteredBookings(applyFilters(updatedBookings, filters));
     
-    // Send notification
     await sendNotification(
       'booking_confirmation',
       'Booking Duplicated', 
@@ -323,17 +323,14 @@ export function PersonalBookings() {
       newBookingId
     );
     
-    // Send email notification
     const emailTemplate = generateBookingConfirmationEmail(newBooking, "You");
     
-    // In a real app, this would use the actual user's email
     await sendEmailNotification(
       "you@example.com",
       emailTemplate.subject,
       emailTemplate.body
     );
     
-    // Add to calendar
     await sendCalendarInvite(
       newBooking,
       newBooking.attendees.map(a => a.email),
@@ -347,22 +344,18 @@ export function PersonalBookings() {
   };
 
   const handleShareBooking = async (bookingId: string, method: 'email' | 'calendar') => {
-    // Find the booking to share
     const bookingToShare = bookings.find(b => b.id === bookingId);
     if (!bookingToShare) return;
     
     if (method === 'email') {
-      // In a real app, this would show a dialog to select recipients
       const emailTemplate = generateBookingConfirmationEmail(bookingToShare, "Colleague");
       
-      // Mock sending to a colleague
       await sendEmailNotification(
         "colleague@example.com",
         emailTemplate.subject,
         emailTemplate.body
       );
     } else if (method === 'calendar') {
-      // In a real app, this would allow selecting calendar type
       await sendCalendarInvite(
         bookingToShare,
         bookingToShare.attendees.map(a => a.email),
@@ -377,26 +370,22 @@ export function PersonalBookings() {
   };
 
   const handleSetReminder = async (bookingId: string, minutes?: number) => {
-    // Find the booking to set reminder for
     const bookingToRemind = bookings.find(b => b.id === bookingId);
     if (!bookingToRemind) return;
     
-    const reminderMin = minutes || 15; // Default to 15 minutes if not specified
+    const reminderMin = minutes || 15;
     
-    // Calculate when the reminder should be sent
-    const reminderTime = new Date(bookingToRemind.start.getTime() - (reminderMin * 60 * 1000));
+    const reminderTime = new Date(bookingToRemind.startTime.getTime() - (reminderMin * 60 * 1000));
     
-    // Schedule the reminder
     await scheduleReminder(
       bookingId,
-      "1", // User ID
+      "1",
       reminderTime,
       `Reminder: ${bookingToRemind.title}`,
       `Your meeting in ${bookingToRemind.roomName} starts in ${reminderMin} minutes.`,
       ['in_app', 'email', 'push']
     );
     
-    // For demo purposes, if the reminder would be in the past, send it immediately
     if (reminderTime < new Date()) {
       await sendNotification(
         'booking_reminder',
@@ -407,7 +396,6 @@ export function PersonalBookings() {
         bookingId
       );
       
-      // Send email notification
       const emailTemplate = generateReminderEmail(bookingToRemind, "You", reminderMin);
       
       await sendEmailNotification(
@@ -425,20 +413,17 @@ export function PersonalBookings() {
 
   const applyFilters = (bookingList: Booking[], currentFilters: typeof filters) => {
     return bookingList.filter(booking => {
-      // Filter by date range
-      if (currentFilters.dateRange.from && new Date(booking.start) < currentFilters.dateRange.from) {
+      if (currentFilters.dateRange.from && new Date(booking.startTime) < currentFilters.dateRange.from) {
         return false;
       }
-      if (currentFilters.dateRange.to && new Date(booking.start) > currentFilters.dateRange.to) {
+      if (currentFilters.dateRange.to && new Date(booking.startTime) > currentFilters.dateRange.to) {
         return false;
       }
       
-      // Filter by room
       if (currentFilters.roomId !== null && booking.roomId !== currentFilters.roomId) {
         return false;
       }
       
-      // Filter by status
       if (currentFilters.status !== null && booking.status !== currentFilters.status) {
         return false;
       }
@@ -451,6 +436,8 @@ export function PersonalBookings() {
     setFilters(newFilters);
     setFilteredBookings(applyFilters(bookings, newFilters));
   };
+
+  const convertedBookings: BookingServiceType[] = filteredBookings.map(convertToServiceBooking);
 
   return (
     <div className="space-y-6">
@@ -487,7 +474,7 @@ export function PersonalBookings() {
         <Tabs value={activeView} className="w-full">
           <TabsContent value="list" className="m-0">
             <BookingsList 
-              bookings={filteredBookings}
+              bookings={convertedBookings}
               onCancel={handleCancelBooking}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}

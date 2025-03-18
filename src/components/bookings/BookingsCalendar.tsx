@@ -45,8 +45,8 @@ export function BookingsCalendar({
   const events = bookings.map((booking) => ({
     id: booking.id,
     title: booking.title,
-    start: new Date(booking.start),
-    end: new Date(booking.end),
+    start: new Date(booking.startTime), // Use startTime instead of start
+    end: new Date(booking.endTime), // Use endTime instead of end
     resource: booking,
   }));
 

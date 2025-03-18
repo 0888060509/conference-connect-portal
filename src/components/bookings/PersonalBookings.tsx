@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookingsList } from "./BookingsList";
@@ -50,6 +51,24 @@ export interface Booking {
 
 // Helper function to convert our local Booking type to BookingService type
 const convertToServiceBooking = (booking: Booking): BookingServiceType => {
+  // Map our custom statuses to the service ones
+  let serviceStatus: "confirmed" | "cancelled" | "completed" | "pending";
+  
+  switch (booking.status) {
+    case "upcoming":
+    case "ongoing":
+      serviceStatus = "confirmed";
+      break;
+    case "cancelled":
+      serviceStatus = "cancelled";
+      break;
+    case "completed":
+      serviceStatus = "completed";
+      break;
+    default:
+      serviceStatus = "confirmed";
+  }
+  
   return {
     id: booking.id,
     roomId: String(booking.roomId),
@@ -57,7 +76,7 @@ const convertToServiceBooking = (booking: Booking): BookingServiceType => {
     description: booking.description,
     startTime: booking.startTime,
     endTime: booking.endTime,
-    status: booking.status === "ongoing" ? "confirmed" : booking.status,
+    status: serviceStatus,
     roomName: booking.roomName,
     location: booking.location
   };

@@ -31,8 +31,8 @@ export const sendCalendarInvite = async (
   // In a real app, this would generate and send calendar invitations
   console.log(`[CALENDAR SERVICE] Creating ${calendarType} calendar event`);
   console.log(`Title: ${booking.title}`);
-  console.log(`Start: ${booking.start}`);
-  console.log(`End: ${booking.end}`);
+  console.log(`Start: ${booking.startTime}`);
+  console.log(`End: ${booking.endTime}`);
   console.log(`Attendees: ${attendees.join(', ')}`);
   
   // Simulate network delay

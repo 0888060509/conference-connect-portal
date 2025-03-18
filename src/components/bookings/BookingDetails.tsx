@@ -87,12 +87,12 @@ export function BookingDetails({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</span>
+              <span className="font-medium">{format(new Date(booking.startTime), "EEEE, MMMM d, yyyy")}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span>
-                {format(new Date(booking.start), "h:mm a")} - {format(new Date(booking.end), "h:mm a")}
+                {format(new Date(booking.startTime), "h:mm a")} - {format(new Date(booking.endTime), "h:mm a")}
               </span>
             </div>
             <div className="flex items-center gap-2">

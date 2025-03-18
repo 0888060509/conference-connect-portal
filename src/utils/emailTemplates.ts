@@ -49,8 +49,8 @@ export const generateBookingConfirmationEmail = (booking: Booking, userName: str
       <p><strong>Meeting:</strong> ${booking.title}</p>
       <p><strong>Room:</strong> ${booking.roomName}</p>
       <p><strong>Location:</strong> ${booking.location}</p>
-      <p><strong>Date:</strong> ${format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</p>
-      <p><strong>Time:</strong> ${format(new Date(booking.start), "h:mm a")} - ${format(new Date(booking.end), "h:mm a")}</p>
+      <p><strong>Date:</strong> ${format(new Date(booking.startTime), "EEEE, MMMM d, yyyy")}</p>
+      <p><strong>Time:</strong> ${format(new Date(booking.startTime), "h:mm a")} - ${format(new Date(booking.endTime), "h:mm a")}</p>
       <p><strong>Attendees:</strong> ${booking.attendees.map(a => a.name).join(", ")}</p>
     </div>
     
@@ -90,8 +90,8 @@ export const generateReminderEmail = (booking: Booking, userName: string, minute
       <p><strong>Meeting:</strong> ${booking.title}</p>
       <p><strong>Room:</strong> ${booking.roomName}</p>
       <p><strong>Location:</strong> ${booking.location}</p>
-      <p><strong>Date:</strong> ${format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</p>
-      <p><strong>Time:</strong> ${format(new Date(booking.start), "h:mm a")} - ${format(new Date(booking.end), "h:mm a")}</p>
+      <p><strong>Date:</strong> ${format(new Date(booking.startTime), "EEEE, MMMM d, yyyy")}</p>
+      <p><strong>Time:</strong> ${format(new Date(booking.startTime), "h:mm a")} - ${format(new Date(booking.endTime), "h:mm a")}</p>
     </div>
     
     <a href="https://meetingmaster.app/bookings/${booking.id}" class="button">View Booking</a>
@@ -122,8 +122,8 @@ export const generateBookingModificationEmail = (booking: Booking, userName: str
       <p><strong>Meeting:</strong> ${booking.title}</p>
       <p><strong>Room:</strong> ${booking.roomName}</p>
       <p><strong>Location:</strong> ${booking.location}</p>
-      <p><strong>Date:</strong> ${format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</p>
-      <p><strong>Time:</strong> ${format(new Date(booking.start), "h:mm a")} - ${format(new Date(booking.end), "h:mm a")}</p>
+      <p><strong>Date:</strong> ${format(new Date(booking.startTime), "EEEE, MMMM d, yyyy")}</p>
+      <p><strong>Time:</strong> ${format(new Date(booking.startTime), "h:mm a")} - ${format(new Date(booking.endTime), "h:mm a")}</p>
       <p><strong>Attendees:</strong> ${booking.attendees.map(a => a.name).join(", ")}</p>
     </div>
     
@@ -146,8 +146,8 @@ export const generateBookingCancellationEmail = (booking: Booking, userName: str
     <div class="details">
       <p><strong>Meeting:</strong> ${booking.title}</p>
       <p><strong>Room:</strong> ${booking.roomName}</p>
-      <p><strong>Date:</strong> ${format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</p>
-      <p><strong>Time:</strong> ${format(new Date(booking.start), "h:mm a")} - ${format(new Date(booking.end), "h:mm a")}</p>
+      <p><strong>Date:</strong> ${format(new Date(booking.startTime), "EEEE, MMMM d, yyyy")}</p>
+      <p><strong>Time:</strong> ${format(new Date(booking.startTime), "h:mm a")} - ${format(new Date(booking.endTime), "h:mm a")}</p>
       ${reason ? `<p><strong>Cancellation Reason:</strong> ${reason}</p>` : ''}
     </div>
     
@@ -175,8 +175,8 @@ export const generateBookingConflictEmail = (
     <div class="details">
       <p><strong>Your Booking:</strong> ${booking.title}</p>
       <p><strong>Room:</strong> ${booking.roomName}</p>
-      <p><strong>Date:</strong> ${format(new Date(booking.start), "EEEE, MMMM d, yyyy")}</p>
-      <p><strong>Time:</strong> ${format(new Date(booking.start), "h:mm a")} - ${format(new Date(booking.end), "h:mm a")}</p>
+      <p><strong>Date:</strong> ${format(new Date(booking.startTime), "EEEE, MMMM d, yyyy")}</p>
+      <p><strong>Time:</strong> ${format(new Date(booking.startTime), "h:mm a")} - ${format(new Date(booking.endTime), "h:mm a")}</p>
     </div>
     
     <p>Conflicts with:</p>
@@ -184,8 +184,8 @@ export const generateBookingConflictEmail = (
     <div class="details">
       <p><strong>Meeting:</strong> ${conflictingBooking.title}</p>
       <p><strong>Room:</strong> ${conflictingBooking.roomName}</p>
-      <p><strong>Date:</strong> ${format(new Date(conflictingBooking.start), "EEEE, MMMM d, yyyy")}</p>
-      <p><strong>Time:</strong> ${format(new Date(conflictingBooking.start), "h:mm a")} - ${format(new Date(conflictingBooking.end), "h:mm a")}</p>
+      <p><strong>Date:</strong> ${format(new Date(conflictingBooking.startTime), "EEEE, MMMM d, yyyy")}</p>
+      <p><strong>Time:</strong> ${format(new Date(conflictingBooking.startTime), "h:mm a")} - ${format(new Date(conflictingBooking.endTime), "h:mm a")}</p>
       <p><strong>Organizer:</strong> ${conflictingBooking.createdBy}</p>
     </div>
     

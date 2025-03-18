@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,7 +12,6 @@ export interface User {
   name: string;
   role: UserRole;
   department?: string;
-  position?: string;
 }
 
 interface AuthContextType {
@@ -61,8 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: userData.email,
               name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
               role: userData.role as UserRole,
-              department: userData.department,
-              position: userData.position
+              department: userData.department
             });
           }
         } else {
@@ -96,8 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: userData.email,
               name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
               role: userData.role as UserRole,
-              department: userData.department,
-              position: userData.position
+              department: userData.department
             });
           }
         } else if (event === 'SIGNED_OUT') {

@@ -14,9 +14,9 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true, // Changed from false to true
-    "noUnusedParameters": true, // Changed from false to true
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/serviceWorker.ts", "vite.config.ts"] // Expanded to include all TypeScript files
+  "include": ["vite.config.ts"]
 }

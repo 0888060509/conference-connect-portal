@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { format } from "date-fns";
 import { Layout } from "@/components/layout/Layout";
 import { Card } from "@/components/ui/card";
@@ -16,7 +17,6 @@ import {
   Search,
   Filter,
   Trash,
-  Users,
 } from "lucide-react";
 import { useNotifications, Notification, NotificationType } from "@/contexts/NotificationContext";
 import { Link, useNavigate } from "react-router-dom";
@@ -27,44 +27,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { OnlineUsers } from "@/components/realtime/OnlineUsers";
 
 export default function Notifications() {
   const { notifications, markAsRead, markAllAsRead } = useNotifications();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
-  const [realTimeNotifications, setRealTimeNotifications] = useState<Notification[]>([]);
   const navigate = useNavigate();
-  const { toast } = useToast();
-  
-  const allNotifications = [...notifications, ...realTimeNotifications];
-  
-  useEffect(() => {
-    const channel = supabase
-      .channel('public:notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications'
-      }, (payload) => {
-        const newNotification = payload.new as Notification;
-        
-        toast({
-          title: "New Notification",
-          description: newNotification.message,
-          duration: 5000,
-        });
-        
-        setRealTimeNotifications(prev => [newNotification, ...prev]);
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [toast]);
   
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
@@ -152,8 +120,8 @@ export default function Notifications() {
       });
   };
   
-  const filteredNotifications = filterNotifications(allNotifications);
-  const unreadCount = allNotifications.filter(n => !n.read).length;
+  const filteredNotifications = filterNotifications(notifications);
+  const unreadCount = notifications.filter(n => !n.read).length;
   
   return (
     <Layout title="Notifications">
@@ -182,7 +150,7 @@ export default function Notifications() {
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row gap-4 items-start">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <div className="relative w-full sm:w-auto flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -255,14 +223,6 @@ export default function Notifications() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
-        <Card className="p-4">
-          <h3 className="text-sm font-semibold mb-2 flex items-center">
-            <Users className="h-4 w-4 mr-2" />
-            Online Users
-          </h3>
-          <OnlineUsers />
-        </Card>
         
         <Card className="p-0">
           {filteredNotifications.length === 0 ? (

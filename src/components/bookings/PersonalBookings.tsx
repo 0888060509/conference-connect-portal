@@ -1,295 +1,493 @@
 
 import { useState } from "react";
-import { format, addDays, subDays } from "date-fns";
-import { DateRange } from "react-day-picker";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookingFilters } from "./BookingFilters";
-import { BookingsCalendar } from "./BookingsCalendar";
-import { BookingDetails } from "./BookingDetails";
 import { BookingsList } from "./BookingsList";
-import { ResponsiveBookingsList } from "./ResponsiveBookingsList";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { BookingsCalendar } from "./BookingsCalendar";
+import { BookingFilters } from "./BookingFilters";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { CalendarRange, List, Plus } from "lucide-react";
+import { useNotifications } from "@/contexts/NotificationContext";
+import { 
+  generateBookingConfirmationEmail,
+  generateBookingCancellationEmail,
+  generateBookingModificationEmail,
+  generateReminderEmail
+} from "@/utils/emailTemplates";
+import { 
+  sendEmailNotification, 
+  sendCalendarInvite,
+  sendPushNotification,
+  scheduleReminder
+} from "@/services/NotificationService";
 
+// Booking status types
+export type BookingStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
+
+// Booking type
 export interface Booking {
   id: string;
   title: string;
-  description: string;
+  description?: string;
+  roomId: number;
   roomName: string;
   location: string;
-  start: string;
-  end: string;
-  attendees: string[];
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-  checkedIn?: boolean;
-  checkedInAt?: string;
-  checkedOut?: boolean;
-  checkedOutAt?: string;
-  createdBy?: string;
-  equipment?: string[];
-  cateringRequested?: boolean;
-  isRecurring?: boolean;
+  start: Date;
+  end: Date;
+  attendees: { id: string; name: string; email: string }[];
+  status: BookingStatus;
+  isRecurring: boolean;
   recurrencePattern?: string;
+  equipment: string[];
+  cateringRequested: boolean;
+  createdBy: string;
+  createdAt: Date;
+  checkedIn?: boolean;
+  checkedInAt?: Date;
+  checkedOut?: boolean;
+  checkedOutAt?: Date;
 }
 
-export type BookingStatus = 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
-
-// Sample bookings data
-const SAMPLE_BOOKINGS: Booking[] = [
+// Mock bookings data
+const MOCK_BOOKINGS: Booking[] = [
   {
-    id: "1",
-    title: "Marketing Meeting",
-    description: "Discuss Q3 marketing strategy and plan upcoming campaigns.",
+    id: "bk-001",
+    title: "Weekly Team Meeting",
+    description: "Regular team sync to discuss progress and blockers",
+    roomId: 1,
     roomName: "Conference Room A",
-    location: "2nd Floor",
-    start: addDays(new Date(), 1).toISOString(),
-    end: new Date(addDays(new Date(), 1).setHours(11, 0, 0, 0)).toISOString(),
-    attendees: ["john.doe@example.com", "jane.smith@example.com"],
+    location: "Floor 3",
+    start: new Date(new Date().setHours(10, 0, 0, 0)),
+    end: new Date(new Date().setHours(11, 0, 0, 0)),
+    attendees: [
+      { id: "1", name: "You", email: "you@example.com" },
+      { id: "2", name: "John Doe", email: "john@example.com" },
+      { id: "3", name: "Jane Smith", email: "jane@example.com" },
+    ],
     status: "upcoming",
-    createdBy: "john.doe@example.com",
-    equipment: ["Projector", "Whiteboard"],
-    cateringRequested: true,
-    isRecurring: false
+    isRecurring: true,
+    recurrencePattern: "weekly",
+    equipment: ["projector", "whiteboard"],
+    cateringRequested: false,
+    createdBy: "You",
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 7)),
   },
   {
-    id: "2",
-    title: "Sales Training",
-    description: "Training session for new sales team members.",
-    roomName: "Training Room 1",
-    location: "3rd Floor",
-    start: new Date().toISOString(),
-    end: new Date(new Date().setHours(17, 0, 0, 0)).toISOString(),
-    attendees: ["mark.johnson@example.com", "lisa.brown@example.com"],
-    status: "ongoing",
-    checkedIn: true,
-    checkedInAt: new Date(new Date().setHours(9, 0, 0, 0)).toISOString(),
-    createdBy: "mark.johnson@example.com",
-    equipment: ["Projector", "Laptops"],
-    cateringRequested: true,
-    isRecurring: false
-  },
-  {
-    id: "3",
+    id: "bk-002",
     title: "Project Kickoff",
-    description: "Initial meeting to kick off the new project.",
-    roomName: "Meeting Room B",
-    location: "2nd Floor",
-    start: subDays(new Date(), 2).toISOString(),
-    end: new Date(subDays(new Date(), 2).setHours(12, 0, 0, 0)).toISOString(),
-    attendees: ["sarah.jones@example.com", "david.williams@example.com"],
+    description: "Initial meeting to discuss project scope and timeline",
+    roomId: 2,
+    roomName: "Meeting Room 101",
+    location: "Floor 2",
+    start: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(14, 0, 0, 0)),
+    end: new Date(new Date(new Date().setDate(new Date().getDate() + 1)).setHours(15, 30, 0, 0)),
+    attendees: [
+      { id: "1", name: "You", email: "you@example.com" },
+      { id: "4", name: "Michael Johnson", email: "michael@example.com" },
+      { id: "5", name: "Sarah Williams", email: "sarah@example.com" },
+    ],
+    status: "upcoming",
+    isRecurring: false,
+    equipment: ["projector", "whiteboard", "videoConferencing"],
+    cateringRequested: true,
+    createdBy: "You",
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 2)),
+  },
+  {
+    id: "bk-003",
+    title: "Client Meeting",
+    description: "Meeting with client to present project progress",
+    roomId: 3,
+    roomName: "Executive Boardroom",
+    location: "Floor 5",
+    start: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(9, 0, 0, 0)),
+    end: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 0, 0, 0)),
+    attendees: [
+      { id: "1", name: "You", email: "you@example.com" },
+      { id: "6", name: "David Brown", email: "david@example.com" },
+    ],
     status: "completed",
-    createdBy: "sarah.jones@example.com",
-    equipment: ["Whiteboard"],
+    isRecurring: false,
+    equipment: ["videoConferencing"],
     cateringRequested: false,
-    isRecurring: false
+    createdBy: "You",
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 9)),
+    checkedIn: true,
+    checkedInAt: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(8, 55, 0, 0)),
+    checkedOut: true,
+    checkedOutAt: new Date(new Date(new Date().setDate(new Date().getDate() - 2)).setHours(10, 5, 0, 0)),
   },
   {
-    id: "4",
-    title: "Client Presentation",
-    description: "Presenting the new product to potential clients.",
-    roomName: "Presentation Hall",
-    location: "1st Floor",
-    start: addDays(new Date(), 3).toISOString(),
-    end: new Date(addDays(new Date(), 3).setHours(16, 0, 0, 0)).toISOString(),
-    attendees: ["emily.clark@example.com", "kevin.davis@example.com"],
-    status: "upcoming",
-    createdBy: "emily.clark@example.com",
-    equipment: ["Projector", "Sound System"],
-    cateringRequested: true,
-    isRecurring: false
-  },
-  {
-    id: "5",
-    title: "Team Building Activity",
-    description: "Off-site team building event.",
-    roomName: "Recreation Center",
-    location: "Off-site",
-    start: addDays(new Date(), 7).toISOString(),
-    end: new Date(addDays(new Date(), 7).setHours(17, 0, 0, 0)).toISOString(),
-    attendees: ["all.employees@example.com"],
-    status: "upcoming",
-    createdBy: "hr@example.com",
-    cateringRequested: true,
-    isRecurring: false
-  },
-  {
-    id: "6",
-    title: "Board Meeting",
-    description: "Monthly board meeting to discuss company performance.",
-    roomName: "Board Room",
-    location: "4th Floor",
-    start: subDays(new Date(), 7).toISOString(),
-    end: new Date(subDays(new Date(), 7).setHours(12, 0, 0, 0)).toISOString(),
-    attendees: ["board.members@example.com"],
-    status: "completed",
-    createdBy: "ceo@example.com",
-    equipment: ["Projector", "Conference System"],
-    cateringRequested: true,
-    isRecurring: true,
-    recurrencePattern: "monthly"
-  },
-  {
-    id: "7",
-    title: "Product Demo",
-    description: "Demonstration of the latest product features.",
-    roomName: "Demo Room",
-    location: "1st Floor",
-    start: addDays(new Date(), 2).toISOString(),
-    end: new Date(addDays(new Date(), 2).setHours(15, 0, 0, 0)).toISOString(),
-    attendees: ["product.team@example.com"],
-    status: "upcoming",
-    createdBy: "product.manager@example.com",
-    equipment: ["Laptops", "Demo Equipment"],
-    cateringRequested: false,
-    isRecurring: false
-  },
-  {
-    id: "8",
-    title: "HR Training",
-    description: "Training session on new HR policies.",
-    roomName: "Training Room 2",
-    location: "3rd Floor",
-    start: subDays(new Date(), 1).toISOString(),
-    end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
-    attendees: ["hr.team@example.com"],
-    status: "completed",
-    createdBy: "hr.director@example.com",
-    equipment: ["Projector"],
-    cateringRequested: true,
-    isRecurring: true,
-    recurrencePattern: "weekly"
-  },
-  {
-    id: "9",
-    title: "Customer Feedback Session",
-    description: "Gathering feedback from key customers.",
-    roomName: "Feedback Room",
-    location: "2nd Floor",
-    start: addDays(new Date(), 4).toISOString(),
-    end: new Date(addDays(new Date(), 4).setHours(14, 0, 0, 0)).toISOString(),
-    attendees: ["customer1@example.com", "customer2@example.com"],
-    status: "upcoming",
-    createdBy: "customer.success@example.com",
-    equipment: ["Whiteboard", "Laptops"],
-    cateringRequested: true,
-    isRecurring: false
-  },
-  {
-    id: "10",
-    title: "End of Day",
-    description: "End of day",
-    roomName: "Room 1",
-    location: "3rd Floor",
-    start: subDays(new Date(), 1).toISOString(),
-    end: new Date(subDays(new Date(), 1).setHours(17, 0, 0, 0)).toISOString(),
-    attendees: ["hr.team@example.com"],
+    id: "bk-004",
+    title: "Interview Session",
+    description: "Interview with potential candidate",
+    roomId: 4,
+    roomName: "Meeting Room 102",
+    location: "Floor 2",
+    start: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(13, 0, 0, 0)),
+    end: new Date(new Date(new Date().setDate(new Date().getDate() - 1)).setHours(14, 0, 0, 0)),
+    attendees: [
+      { id: "1", name: "You", email: "you@example.com" },
+      { id: "7", name: "Emma Wilson", email: "emma@example.com" },
+    ],
     status: "cancelled",
-    createdBy: "office.manager@example.com",
+    isRecurring: false,
+    equipment: [],
     cateringRequested: false,
-    isRecurring: false
+    createdBy: "You",
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 5)),
   },
 ];
 
 export function PersonalBookings() {
-  const [activeFilter, setActiveFilter] = useState<"upcoming" | "past" | "all">("upcoming");
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const isMobile = useIsMobile();
-  const [viewBookingId, setViewBookingId] = useState<string | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>(MOCK_BOOKINGS);
+  const [activeView, setActiveView] = useState<"list" | "calendar">("list");
+  const [filters, setFilters] = useState({
+    dateRange: { from: undefined, to: undefined } as { from: Date | undefined; to: Date | undefined },
+    roomId: null as number | null,
+    status: null as BookingStatus | null,
+  });
+  
+  const { toast } = useToast();
+  const { sendNotification } = useNotifications();
 
-  const handleFilterChange = (filter: "upcoming" | "past" | "all") => {
-    setActiveFilter(filter);
+  const handleCreateBooking = () => {
+    // This would typically open a modal or navigate to the booking creation page
+    toast({
+      title: "Create Booking",
+      description: "This would open the booking creation form",
+    });
   };
 
-  const filterBookings = (bookings: Booking[]) => {
-    let filtered = [...bookings];
+  const handleCancelBooking = async (bookingId: string, reason?: string) => {
+    // Find the booking to cancel
+    const bookingToCancel = bookings.find(b => b.id === bookingId);
+    if (!bookingToCancel) return;
+    
+    // Update booking status to cancelled
+    const updatedBookings = bookings.map(booking => 
+      booking.id === bookingId 
+        ? { ...booking, status: 'cancelled' as BookingStatus } 
+        : booking
+    );
+    
+    setBookings(updatedBookings);
+    setFilteredBookings(applyFilters(updatedBookings, filters));
+    
+    // Send in-app notification
+    await sendNotification(
+      'booking_cancellation',
+      'Booking Cancelled', 
+      `Your booking for ${bookingToCancel.title} has been cancelled.`,
+      ['in_app', 'email'],
+      '/my-bookings',
+      bookingId
+    );
+    
+    // Send email notification
+    const emailTemplate = generateBookingCancellationEmail(bookingToCancel, "You", reason);
+    
+    // In a real app, this would use the actual user's email
+    await sendEmailNotification(
+      "you@example.com",
+      emailTemplate.subject,
+      emailTemplate.body
+    );
+    
+    toast({
+      title: "Booking Cancelled",
+      description: reason ? `Booking has been cancelled. Reason: ${reason}` : "Booking has been cancelled.",
+    });
+  };
 
-    if (activeFilter === "upcoming") {
-      filtered = filtered.filter((booking) => new Date(booking.start) >= new Date() && booking.status !== 'cancelled');
-    } else if (activeFilter === "past") {
-      filtered = filtered.filter((booking) => new Date(booking.start) < new Date());
+  const handleCheckIn = async (bookingId: string) => {
+    // Find the booking to check in
+    const bookingToCheckIn = bookings.find(b => b.id === bookingId);
+    if (!bookingToCheckIn) return;
+    
+    // Update booking check-in status
+    const updatedBookings = bookings.map(booking => 
+      booking.id === bookingId 
+        ? { 
+            ...booking, 
+            checkedIn: true, 
+            checkedInAt: new Date(),
+            status: 'ongoing' as BookingStatus 
+          } 
+        : booking
+    );
+    
+    setBookings(updatedBookings);
+    setFilteredBookings(applyFilters(updatedBookings, filters));
+    
+    // Send notification
+    await sendNotification(
+      'booking_modification',
+      'Checked In to Meeting', 
+      `You have successfully checked in to ${bookingToCheckIn.title} in ${bookingToCheckIn.roomName}.`,
+      ['in_app'],
+      '/my-bookings',
+      bookingId
+    );
+    
+    toast({
+      title: "Checked In",
+      description: "You have successfully checked in to your booking",
+    });
+  };
+
+  const handleCheckOut = async (bookingId: string) => {
+    // Find the booking to check out
+    const bookingToCheckOut = bookings.find(b => b.id === bookingId);
+    if (!bookingToCheckOut) return;
+    
+    // Update booking check-out status
+    const updatedBookings = bookings.map(booking => 
+      booking.id === bookingId 
+        ? { 
+            ...booking, 
+            checkedOut: true, 
+            checkedOutAt: new Date(),
+            status: 'completed' as BookingStatus 
+          } 
+        : booking
+    );
+    
+    setBookings(updatedBookings);
+    setFilteredBookings(applyFilters(updatedBookings, filters));
+    
+    // Send notification
+    await sendNotification(
+      'booking_modification',
+      'Checked Out from Meeting', 
+      `You have successfully checked out from ${bookingToCheckOut.title} in ${bookingToCheckOut.roomName}.`,
+      ['in_app'],
+      '/my-bookings',
+      bookingId
+    );
+    
+    toast({
+      title: "Checked Out",
+      description: "You have successfully checked out from your booking",
+    });
+  };
+
+  const handleDuplicateBooking = async (bookingId: string) => {
+    // Find the booking to duplicate
+    const bookingToDuplicate = bookings.find(b => b.id === bookingId);
+    
+    if (!bookingToDuplicate) return;
+    
+    // Create a new booking based on the existing one
+    const nextWeekDate = new Date();
+    nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+    
+    const startHours = bookingToDuplicate.start.getHours();
+    const startMinutes = bookingToDuplicate.start.getMinutes();
+    const endHours = bookingToDuplicate.end.getHours();
+    const endMinutes = bookingToDuplicate.end.getMinutes();
+    
+    const newStartDate = new Date(nextWeekDate);
+    newStartDate.setHours(startHours, startMinutes, 0, 0);
+    
+    const newEndDate = new Date(nextWeekDate);
+    newEndDate.setHours(endHours, endMinutes, 0, 0);
+    
+    const newBookingId = `bk-${Date.now()}`;
+    
+    const newBooking: Booking = {
+      ...bookingToDuplicate,
+      id: newBookingId,
+      start: newStartDate,
+      end: newEndDate,
+      status: 'upcoming',
+      createdAt: new Date(),
+      checkedIn: undefined,
+      checkedInAt: undefined,
+      checkedOut: undefined,
+      checkedOutAt: undefined,
+    };
+    
+    const updatedBookings = [...bookings, newBooking];
+    setBookings(updatedBookings);
+    setFilteredBookings(applyFilters(updatedBookings, filters));
+    
+    // Send notification
+    await sendNotification(
+      'booking_confirmation',
+      'Booking Duplicated', 
+      `A new booking has been created based on ${bookingToDuplicate.title}.`,
+      ['in_app', 'email', 'calendar'],
+      '/my-bookings',
+      newBookingId
+    );
+    
+    // Send email notification
+    const emailTemplate = generateBookingConfirmationEmail(newBooking, "You");
+    
+    // In a real app, this would use the actual user's email
+    await sendEmailNotification(
+      "you@example.com",
+      emailTemplate.subject,
+      emailTemplate.body
+    );
+    
+    // Add to calendar
+    await sendCalendarInvite(
+      newBooking,
+      newBooking.attendees.map(a => a.email),
+      "you@example.com"
+    );
+    
+    toast({
+      title: "Booking Duplicated",
+      description: "A new booking has been created based on the selected booking",
+    });
+  };
+
+  const handleShareBooking = async (bookingId: string, method: 'email' | 'calendar') => {
+    // Find the booking to share
+    const bookingToShare = bookings.find(b => b.id === bookingId);
+    if (!bookingToShare) return;
+    
+    if (method === 'email') {
+      // In a real app, this would show a dialog to select recipients
+      const emailTemplate = generateBookingConfirmationEmail(bookingToShare, "Colleague");
+      
+      // Mock sending to a colleague
+      await sendEmailNotification(
+        "colleague@example.com",
+        emailTemplate.subject,
+        emailTemplate.body
+      );
+    } else if (method === 'calendar') {
+      // In a real app, this would allow selecting calendar type
+      await sendCalendarInvite(
+        bookingToShare,
+        bookingToShare.attendees.map(a => a.email),
+        "you@example.com"
+      );
     }
+    
+    toast({
+      title: `Booking Shared via ${method === 'email' ? 'Email' : 'Calendar Invitation'}`,
+      description: "Booking details have been shared",
+    });
+  };
 
-    if (dateRange?.from && dateRange?.to) {
-      filtered = filtered.filter((booking) => {
-        const bookingDate = new Date(booking.start);
-        return bookingDate >= dateRange.from! && bookingDate <= dateRange.to!;
-      });
+  const handleSetReminder = async (bookingId: string, minutes?: number) => {
+    // Find the booking to set reminder for
+    const bookingToRemind = bookings.find(b => b.id === bookingId);
+    if (!bookingToRemind) return;
+    
+    const reminderMin = minutes || 15; // Default to 15 minutes if not specified
+    
+    // Calculate when the reminder should be sent
+    const reminderTime = new Date(bookingToRemind.start.getTime() - (reminderMin * 60 * 1000));
+    
+    // Schedule the reminder
+    await scheduleReminder(
+      bookingId,
+      "1", // User ID
+      reminderTime,
+      `Reminder: ${bookingToRemind.title}`,
+      `Your meeting in ${bookingToRemind.roomName} starts in ${reminderMin} minutes.`,
+      ['in_app', 'email', 'push']
+    );
+    
+    // For demo purposes, if the reminder would be in the past, send it immediately
+    if (reminderTime < new Date()) {
+      await sendNotification(
+        'booking_reminder',
+        `Reminder: ${bookingToRemind.title}`, 
+        `Your meeting in ${bookingToRemind.roomName} is coming up.`,
+        ['in_app'],
+        '/my-bookings',
+        bookingId
+      );
+      
+      // Send email notification
+      const emailTemplate = generateReminderEmail(bookingToRemind, "You", reminderMin);
+      
+      await sendEmailNotification(
+        "you@example.com",
+        emailTemplate.subject,
+        emailTemplate.body
+      );
     }
-
-    return filtered;
+    
+    toast({
+      title: "Reminder Set",
+      description: `You will be reminded ${reminderMin} minutes before the booking`,
+    });
   };
 
-  const handleCancelBooking = (bookingId: string, reason?: string) => {
-    // Implement your cancellation logic here
-    console.log(`Booking ${bookingId} cancelled with reason: ${reason}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
+  const applyFilters = (bookingList: Booking[], currentFilters: typeof filters) => {
+    return bookingList.filter(booking => {
+      // Filter by date range
+      if (currentFilters.dateRange.from && new Date(booking.start) < currentFilters.dateRange.from) {
+        return false;
+      }
+      if (currentFilters.dateRange.to && new Date(booking.start) > currentFilters.dateRange.to) {
+        return false;
+      }
+      
+      // Filter by room
+      if (currentFilters.roomId !== null && booking.roomId !== currentFilters.roomId) {
+        return false;
+      }
+      
+      // Filter by status
+      if (currentFilters.status !== null && booking.status !== currentFilters.status) {
+        return false;
+      }
+      
+      return true;
+    });
   };
 
-  const handleCheckIn = (bookingId: string) => {
-    // Implement your check-in logic here
-    console.log(`Checking in for booking ${bookingId}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
-  };
-
-  const handleCheckOut = (bookingId: string) => {
-    // Implement your check-out logic here
-    console.log(`Checking out for booking ${bookingId}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
-  };
-
-  const handleDuplicateBooking = (bookingId: string) => {
-    // Implement your duplicate logic here
-    console.log(`Duplicating booking ${bookingId}`);
-    // Update the SAMPLE_BOOKINGS array or your data source accordingly
-  };
-
-  const handleShareBooking = (bookingId: string, method: 'email' | 'calendar') => {
-    // Implement your share logic here
-    console.log(`Sharing booking ${bookingId} via ${method}`);
-    // Open email client or add to calendar
-  };
-
-  const handleSetReminder = (bookingId: string, minutes?: number) => {
-    // Implement your set reminder logic here
-    console.log(`Setting reminder for booking ${bookingId} ${minutes ? `before ${minutes} minutes` : ''}`);
-    // Set a local notification or use a service to send a reminder
+  const handleFilterChange = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+    setFilteredBookings(applyFilters(bookings, newFilters));
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">My Bookings</h1>
-        <BookingFilters 
-          activeFilter={activeFilter}
-          onFilterChange={handleFilterChange}
-          dateRange={dateRange}
-          onDateRangeChange={setDateRange}
-        />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <Tabs 
+          value={activeView} 
+          onValueChange={(value) => setActiveView(value as "list" | "calendar")}
+          className="w-full sm:w-auto"
+        >
+          <TabsList className="grid w-full sm:w-auto grid-cols-2">
+            <TabsTrigger value="list" className="flex items-center gap-2">
+              <List className="h-4 w-4" />
+              List View
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="flex items-center gap-2">
+              <CalendarRange className="h-4 w-4" />
+              Calendar View
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <Button onClick={handleCreateBooking} className="w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Booking
+        </Button>
       </div>
-
-      <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="list">List View</TabsTrigger>
-          <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-        </TabsList>
-        <TabsContent value="list">
-          {isMobile ? (
-            <ResponsiveBookingsList
-              bookings={filterBookings(SAMPLE_BOOKINGS)}
-              onCancel={handleCancelBooking}
-              onCheckIn={handleCheckIn}
-              onCheckOut={handleCheckOut}
-              onDuplicate={handleDuplicateBooking}
-              onShare={handleShareBooking}
-              onSetReminder={handleSetReminder}
-              onViewDetails={(id) => setViewBookingId(id)}
-            />
-          ) : (
-            <BookingsList
-              bookings={filterBookings(SAMPLE_BOOKINGS)}
+      
+      <BookingFilters 
+        filters={filters}
+        onFilterChange={handleFilterChange}
+      />
+      
+      <div className="border rounded-lg shadow-sm">
+        <Tabs value={activeView} className="w-full">
+          <TabsContent value="list" className="m-0">
+            <BookingsList 
+              bookings={filteredBookings}
               onCancel={handleCancelBooking}
               onCheckIn={handleCheckIn}
               onCheckOut={handleCheckOut}
@@ -297,35 +495,20 @@ export function PersonalBookings() {
               onShare={handleShareBooking}
               onSetReminder={handleSetReminder}
             />
-          )}
-        </TabsContent>
-        <TabsContent value="calendar">
-          <BookingsCalendar
-            bookings={filterBookings(SAMPLE_BOOKINGS)}
-            onCancel={handleCancelBooking}
-            onCheckIn={handleCheckIn}
-            onCheckOut={handleCheckOut}
-            onDuplicate={handleDuplicateBooking}
-            onShare={handleShareBooking}
-            onSetReminder={handleSetReminder}
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* Booking Details */}
-      {viewBookingId && (
-        <BookingDetails
-          bookingId={viewBookingId}
-          bookings={SAMPLE_BOOKINGS}
-          onClose={() => setViewBookingId(null)}
-          onCancel={handleCancelBooking}
-          onCheckIn={handleCheckIn}
-          onCheckOut={handleCheckOut}
-          onDuplicate={handleDuplicateBooking}
-          onShare={handleShareBooking}
-          onSetReminder={handleSetReminder}
-        />
-      )}
+          </TabsContent>
+          <TabsContent value="calendar" className="m-0">
+            <BookingsCalendar 
+              bookings={filteredBookings}
+              onCancel={handleCancelBooking}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              onDuplicate={handleDuplicateBooking}
+              onShare={handleShareBooking}
+              onSetReminder={handleSetReminder}
+            />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

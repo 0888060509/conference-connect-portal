@@ -3,6 +3,9 @@ import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/auth";
 import { useEffect, useState } from "react";
 
+// Development bypass flag - set to true to bypass authentication
+const BYPASS_AUTH = true;
+
 interface PrivateRouteProps {
   requireAdmin?: boolean;
 }
@@ -27,8 +30,15 @@ export default function PrivateRoute({ requireAdmin = false }: PrivateRouteProps
     isLoading,
     isAuthenticated,
     currentPath: location.pathname,
-    user: user ? 'User exists' : 'No user'
+    user: user ? 'User exists' : 'No user',
+    bypassEnabled: BYPASS_AUTH
   });
+
+  // Allow direct access if bypass is enabled
+  if (BYPASS_AUTH) {
+    console.log("Auth bypass enabled - granting access to protected route");
+    return <Outlet />;
+  }
 
   // Only redirect if not loading and not authenticated
   if (!isLoading && !isAuthenticated) {

@@ -6,7 +6,7 @@ import { AppRoutes } from "./routes";
 import { requestNotificationPermission } from "./utils/notificationUtils";
 import { initDataSync } from "./lib/data-sync";
 
-// For demo purposes, toggle this to show the Landing or App
+// For demo purposes, force show the app (not landing)
 const SHOW_LANDING = false;
 
 const App = () => {

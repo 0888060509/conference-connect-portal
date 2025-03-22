@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { config } from "@/config";
+import pool from "@/db/postgres";
 
 // Mock users for development (in a real app, these would come from an API)
 const MOCK_USERS = [
@@ -121,7 +122,7 @@ export const register = async (
       [email]
     );
     
-    if (checkResult.rows.length > 0) {
+    if (checkResult.rows && checkResult.rows.length > 0) {
       throw new Error("User with this email already exists");
     }
     
@@ -142,13 +143,13 @@ export const register = async (
       [email, hashedPassword, firstName, lastName, 'user']
     );
     
-    const user = result.rows[0];
+    const user = result.rows ? result.rows[0] : null;
     
     const userData: User = {
-      id: user.id,
-      email: user.email,
-      name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-      role: user.role as UserRole
+      id: user?.id || '',
+      email: user?.email || '',
+      name: `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
+      role: (user?.role as UserRole) || 'user'
     };
     
     const token = generateToken(userData);
@@ -168,7 +169,7 @@ export const resetPasswordRequest = async (email: string): Promise<boolean> => {
       [email]
     );
     
-    if (result.rows.length === 0) {
+    if (result.rows && result.rows.length === 0) {
       // Don't reveal if email exists or not for security
       return true;
     }
@@ -224,7 +225,7 @@ export const updateUserProfile = async (
       values
     );
     
-    if (result.rows.length === 0) {
+    if (result.rows && result.rows.length === 0) {
       throw new Error("User not found");
     }
     

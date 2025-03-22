@@ -1,3 +1,4 @@
+
 import pool from "@/db/postgres";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -463,7 +464,8 @@ export const getUserBookings = async (status?: 'confirmed' | 'cancelled' | 'comp
 
     query += ` ORDER BY b.start_time ASC`;
 
-    const { rows: data } = await pool.query(query, queryParams);
+    const result = await pool.query(query, queryParams);
+    const data = result.rows || [];
 
     // Transform the data to match our interface
     const transformedBookings: Booking[] = data.map(booking => ({

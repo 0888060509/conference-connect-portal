@@ -1,7 +1,9 @@
+
 // This is a notification service - in a real application, this would connect to backend APIs
 
 import { NotificationType } from "@/contexts/NotificationContext";
 import { Booking } from "@/components/bookings/PersonalBookings";
+import pool from "@/db/postgres";
 
 // Email notification service
 export const sendEmailNotification = async (

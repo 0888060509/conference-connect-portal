@@ -1,6 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import * as AuthService from "../services/AuthService";
 
 // Define user roles
 export type UserRole = "user" | "admin";
@@ -27,87 +28,42 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TOKEN_KEY = "meetly_auth_token";
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for stored session on initial load
+  // Check for stored token on initial load
   useEffect(() => {
     const checkAuth = async () => {
       try {
         setIsLoading(true);
         
-        // Get session from Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session) {
-          // Get user data from the database
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (userError) {
-            console.error("Error fetching user data:", userError);
+        const token = localStorage.getItem(TOKEN_KEY);
+        if (token) {
+          const userData = await AuthService.verifyToken(token);
+          if (userData) {
+            setUser(userData);
+          } else {
+            // Invalid token
+            localStorage.removeItem(TOKEN_KEY);
             setUser(null);
-          } else if (userData) {
-            // Map the database user to our User interface
-            setUser({
-              id: userData.id,
-              email: userData.email,
-              name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
-              role: userData.role as UserRole,
-              department: userData.department
-            });
           }
         } else {
           setUser(null);
         }
       } catch (e) {
         console.error("Auth initialization error:", e);
+        localStorage.removeItem(TOKEN_KEY);
         setUser(null);
       } finally {
-        // Ensure loading state is resolved
         setIsLoading(false);
       }
     };
     
-    // Setup auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          // Get user data when signed in
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-            
-          if (userError) {
-            console.error("Error fetching user data:", userError);
-          } else if (userData) {
-            setUser({
-              id: userData.id,
-              email: userData.email,
-              name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
-              role: userData.role as UserRole,
-              department: userData.department
-            });
-          }
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-        }
-      }
-    );
-    
     checkAuth();
-    
-    // Cleanup subscription on unmount
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   const login = async (email: string, password: string, remember = false) => {
@@ -115,20 +71,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const result = await AuthService.login(email, password);
       
-      if (signInError) {
-        throw new Error(signInError.message);
-      }
-      
-      if (!data.session) {
+      if (!result) {
         throw new Error("Failed to sign in");
       }
       
-      // User data is already set via the auth state change listener
+      setUser(result.user);
+      
+      // Store token in localStorage if remember is true, otherwise in sessionStorage
+      if (remember) {
+        localStorage.setItem(TOKEN_KEY, result.token);
+      } else {
+        sessionStorage.setItem(TOKEN_KEY, result.token);
+      }
       
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
@@ -142,7 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setIsLoading(true);
     try {
-      await supabase.auth.signOut();
+      localStorage.removeItem(TOKEN_KEY);
+      sessionStorage.removeItem(TOKEN_KEY);
       setUser(null);
     } catch (error) {
       console.error("Error signing out:", error);
@@ -156,13 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (resetError) {
-        throw new Error(resetError.message);
-      }
+      await AuthService.resetPasswordRequest(email);
       
       toast.success("Password reset email sent. Check your inbox.");
       

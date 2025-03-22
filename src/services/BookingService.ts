@@ -1,6 +1,6 @@
-
-import { supabase } from "@/integrations/supabase/client";
+import pool from "@/db/postgres";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface RoomFilter {
   capacity?: number;
@@ -47,41 +47,30 @@ export interface Booking {
  */
 export const getAvailableRooms = async (filters: RoomFilter) => {
   try {
-    // Start building the query
-    let query = supabase
-      .from('rooms')
-      .select(`
-        id,
-        name,
-        number,
-        building,
-        floor,
-        capacity,
-        image_url,
-        description,
-        status
-      `)
-      .eq('status', 'active');
+    let query = 'SELECT id, name, number, building, floor, capacity, image_url, description, status FROM rooms WHERE status = $1';
+    const queryParams: any[] = ['active'];
+    let paramIndex = 2;
 
     // Apply filters
     if (filters.capacity) {
-      query = query.gte('capacity', filters.capacity);
+      query += ` AND capacity >= $${paramIndex}`;
+      queryParams.push(filters.capacity);
+      paramIndex++;
     }
 
     if (filters.building) {
-      query = query.eq('building', filters.building);
+      query += ` AND building = $${paramIndex}`;
+      queryParams.push(filters.building);
+      paramIndex++;
     }
 
     if (filters.floor) {
-      query = query.eq('floor', filters.floor);
+      query += ` AND floor = $${paramIndex}`;
+      queryParams.push(filters.floor);
+      paramIndex++;
     }
 
-    const { data: rooms, error } = await query;
-
-    if (error) {
-      console.error('Error fetching rooms:', error);
-      throw error;
-    }
+    const { rows: rooms } = await pool.query(query, queryParams);
 
     // If date and time filters are provided, filter out rooms with conflicting bookings
     if (filters.date && filters.startTime && filters.endTime) {
@@ -92,19 +81,18 @@ export const getAvailableRooms = async (filters: RoomFilter) => {
       // For each room, check if there's a conflicting booking
       const availableRooms = await Promise.all(
         rooms.map(async (room) => {
-          const { data: conflicts, error } = await supabase.rpc(
-            'check_booking_conflicts',
-            {
-              p_room_id: room.id,
-              p_start_time: startTime.toISOString(),
-              p_end_time: endTime.toISOString()
-            }
+          const { rows: conflicts } = await pool.query(
+            `SELECT id, title, start_time, end_time, user_id 
+             FROM bookings 
+             WHERE room_id = $1 
+             AND status != 'cancelled'
+             AND (
+               (start_time <= $2 AND end_time > $2) OR
+               (start_time < $3 AND end_time >= $3) OR
+               (start_time >= $2 AND end_time <= $3)
+             )`,
+            [room.id, startTime.toISOString(), endTime.toISOString()]
           );
-
-          if (error) {
-            console.error('Error checking booking conflicts:', error);
-            return null;
-          }
 
           // If no conflicts, the room is available
           return conflicts.length === 0 ? room : null;
@@ -127,28 +115,18 @@ export const getAvailableRooms = async (filters: RoomFilter) => {
  */
 export const getRoomById = async (roomId: string) => {
   try {
-    const { data: room, error } = await supabase
-      .from('rooms')
-      .select(`
-        id,
-        name,
-        number,
-        building,
-        floor,
-        capacity,
-        image_url,
-        description,
-        status
-      `)
-      .eq('id', roomId)
-      .single();
+    const { rows } = await pool.query(
+      `SELECT id, name, number, building, floor, capacity, image_url, description, status
+       FROM rooms
+       WHERE id = $1`,
+      [roomId]
+    );
 
-    if (error) {
-      console.error('Error fetching room details:', error);
-      throw error;
+    if (rows.length === 0) {
+      throw new Error("Room not found");
     }
 
-    return room;
+    return rows[0];
   } catch (error) {
     console.error('Error in getRoomById:', error);
     toast.error('Failed to fetch room details');
@@ -170,20 +148,26 @@ export const checkRoomAvailability = async (
     const startDateTime = new Date(`${date.toISOString().split('T')[0]}T${startTime}`);
     const endDateTime = new Date(`${date.toISOString().split('T')[0]}T${endTime}`);
 
-    const { data: conflicts, error } = await supabase.rpc(
-      'check_booking_conflicts',
-      {
-        p_room_id: roomId,
-        p_start_time: startDateTime.toISOString(),
-        p_end_time: endDateTime.toISOString(),
-        p_booking_id: excludeBookingId || null
-      }
-    );
-
-    if (error) {
-      console.error('Error checking room availability:', error);
-      throw error;
+    let query = `
+      SELECT id as conflicting_booking_id, title, start_time, end_time, user_id
+      FROM bookings
+      WHERE room_id = $1
+      AND status != 'cancelled'
+      AND (
+        (start_time <= $2 AND end_time > $2) OR
+        (start_time < $3 AND end_time >= $3) OR
+        (start_time >= $2 AND end_time <= $3)
+      )
+    `;
+    
+    const queryParams = [roomId, startDateTime.toISOString(), endDateTime.toISOString()];
+    
+    if (excludeBookingId) {
+      query += ' AND id != $4';
+      queryParams.push(excludeBookingId);
     }
+
+    const { rows: conflicts } = await pool.query(query, queryParams);
 
     return { 
       available: conflicts.length === 0,
@@ -199,7 +183,7 @@ export const checkRoomAvailability = async (
 /**
  * Create a new booking
  */
-export const createBooking = async (bookingData: BookingFormData): Promise<Booking> => {
+export const createBooking = async (bookingData: BookingFormData, userId: string): Promise<Booking> => {
   try {
     // Check if the room is available first
     const { available, conflicts } = await checkRoomAvailability(
@@ -217,73 +201,61 @@ export const createBooking = async (bookingData: BookingFormData): Promise<Booki
     // Format the date and times for the database
     const startDateTime = new Date(`${bookingData.date.toISOString().split('T')[0]}T${bookingData.startTime}`);
     const endDateTime = new Date(`${bookingData.date.toISOString().split('T')[0]}T${bookingData.endTime}`);
-
-    // Get the current user's ID
-    const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
-      toast.error('You must be logged in to create a booking');
-      throw new Error('User not authenticated');
-    }
-
     // Insert the booking
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .insert({
-        room_id: bookingData.roomId,
-        title: bookingData.title,
-        description: bookingData.description,
-        start_time: startDateTime.toISOString(),
-        end_time: endDateTime.toISOString(),
-        status: 'confirmed',
-        user_id: user.id
-      })
-      .select()
-      .single();
-
-    if (bookingError) {
-      console.error('Error creating booking:', bookingError);
-      throw bookingError;
-    }
+    const { rows: [booking] } = await pool.query(
+      `INSERT INTO bookings (
+        room_id, 
+        title, 
+        description, 
+        start_time, 
+        end_time, 
+        status, 
+        user_id,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING id, room_id, title, description, start_time, end_time, status`,
+      [
+        bookingData.roomId,
+        bookingData.title,
+        bookingData.description,
+        startDateTime.toISOString(),
+        endDateTime.toISOString(),
+        'confirmed',
+        userId
+      ]
+    );
 
     // If there are attendees, add them to the booking_attendees table
     if (bookingData.attendees && bookingData.attendees.length > 0) {
       // First, lookup the user IDs for the email addresses
-      const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('id, email')
-        .in('email', bookingData.attendees);
-
-      if (usersError) {
-        console.error('Error fetching attendees:', usersError);
-        // Continue anyway, we'll just add the ones we found
-      }
+      const { rows: users } = await pool.query(
+        `SELECT id, email, first_name, last_name 
+         FROM users 
+         WHERE email = ANY($1)`,
+        [bookingData.attendees]
+      );
 
       if (users && users.length > 0) {
         // Create attendee records for each user
-        const attendeeRecords = users.map(user => ({
-          booking_id: booking.id,
-          user_id: user.id,
-          status: 'invited' as 'invited' | 'confirmed' | 'declined'
-        }));
+        const attendeeValues = users.map(user => 
+          `('${booking.id}', '${user.id}', 'invited')`
+        ).join(',');
 
-        const { error: attendeesError } = await supabase
-          .from('booking_attendees')
-          .insert(attendeeRecords);
-
-        if (attendeesError) {
-          console.error('Error adding attendees:', attendeesError);
-          // Continue anyway, the booking was created
-        }
+        await pool.query(
+          `INSERT INTO booking_attendees (booking_id, user_id, status)
+           VALUES ${attendeeValues}`
+        );
       }
     }
 
     // Get room details to include in the response
-    const { data: room } = await supabase
-      .from('rooms')
-      .select('name, building, floor')
-      .eq('id', bookingData.roomId)
-      .single();
+    const { rows: [room] } = await pool.query(
+      `SELECT name, building, floor 
+       FROM rooms 
+       WHERE id = $1`,
+      [bookingData.roomId]
+    );
 
     toast.success('Booking created successfully');
 
@@ -314,16 +286,16 @@ export const updateBooking = async (
 ): Promise<void> => {
   try {
     // Get the current booking
-    const { data: currentBooking, error: fetchError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('id', bookingId)
-      .single();
+    const { rows: currentBookingResult } = await pool.query(
+      'SELECT * FROM bookings WHERE id = $1',
+      [bookingId]
+    );
 
-    if (fetchError) {
-      console.error('Error fetching booking:', fetchError);
-      throw fetchError;
+    if (currentBookingResult.rows.length === 0) {
+      throw new Error('Booking not found');
     }
+
+    const currentBooking = currentBookingResult.rows[0];
 
     // Prepare update data
     const updateData: any = {};
@@ -368,59 +340,51 @@ export const updateBooking = async (
 
     // Update the booking if we have changes
     if (Object.keys(updateData).length > 0) {
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update(updateData)
-        .eq('id', bookingId);
+      const updateFields = Object.keys(updateData)
+        .map((key, index) => `${key} = $${index + 2}`)
+        .join(', ');
 
-      if (updateError) {
-        console.error('Error updating booking:', updateError);
-        throw updateError;
+      const updateValues = Object.values(updateData);
+      updateValues.unshift(bookingId);
+
+      const { rowCount } = await pool.query(
+        `UPDATE bookings SET ${updateFields} WHERE id = $1`,
+        updateValues
+      );
+
+      if (rowCount === 0) {
+        throw new Error('Failed to update booking');
       }
     }
 
     // Update attendees if provided
     if (bookingData.attendees) {
       // First, remove current attendees
-      const { error: deleteError } = await supabase
-        .from('booking_attendees')
-        .delete()
-        .eq('booking_id', bookingId);
-
-      if (deleteError) {
-        console.error('Error removing current attendees:', deleteError);
-        // Continue anyway
-      }
+      await pool.query(
+        'DELETE FROM booking_attendees WHERE booking_id = $1',
+        [bookingId]
+      );
 
       // Then add new attendees
       if (bookingData.attendees.length > 0) {
         // Lookup the user IDs for the email addresses
-        const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('id, email')
-          .in('email', bookingData.attendees);
-
-        if (usersError) {
-          console.error('Error fetching attendees:', usersError);
-          // Continue anyway
-        }
+        const { rows: users } = await pool.query(
+          `SELECT id, email, first_name, last_name 
+           FROM users 
+           WHERE email = ANY($1)`,
+          [bookingData.attendees]
+        );
 
         if (users && users.length > 0) {
           // Create attendee records for each user
-          const attendeeRecords = users.map(user => ({
-            booking_id: bookingId,
-            user_id: user.id,
-            status: 'invited' as 'invited' | 'confirmed' | 'declined'
-          }));
+          const attendeeValues = users.map(user => 
+            `('${bookingId}', '${user.id}', 'invited')`
+          ).join(',');
 
-          const { error: attendeesError } = await supabase
-            .from('booking_attendees')
-            .insert(attendeeRecords);
-
-          if (attendeesError) {
-            console.error('Error adding attendees:', attendeesError);
-            // Continue anyway
-          }
+          await pool.query(
+            `INSERT INTO booking_attendees (booking_id, user_id, status)
+             VALUES ${attendeeValues}`
+          );
         }
       }
     }
@@ -438,14 +402,13 @@ export const updateBooking = async (
  */
 export const cancelBooking = async (bookingId: string): Promise<void> => {
   try {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status: 'cancelled' as 'confirmed' | 'cancelled' | 'completed' })
-      .eq('id', bookingId);
+    const { rowCount } = await pool.query(
+      `UPDATE bookings SET status = 'cancelled' WHERE id = $1`,
+      [bookingId]
+    );
 
-    if (error) {
-      console.error('Error cancelling booking:', error);
-      throw error;
+    if (rowCount === 0) {
+      throw new Error('Booking not found or already cancelled');
     }
 
     toast.success('Booking cancelled successfully');
@@ -461,39 +424,37 @@ export const cancelBooking = async (bookingId: string): Promise<void> => {
  */
 export const getUserBookings = async (status?: 'confirmed' | 'cancelled' | 'completed'): Promise<Booking[]> => {
   try {
-    let query = supabase
-      .from('bookings')
-      .select(`
-        id,
-        title,
-        description,
-        start_time,
-        end_time,
-        status,
-        room_id,
-        rooms (
-          name,
-          building,
-          floor
-        )
-      `);
+    let query = `
+      SELECT 
+        b.id,
+        b.title,
+        b.description,
+        b.start_time,
+        b.end_time,
+        b.status,
+        b.room_id,
+        r.name AS room_name,
+        r.building AS room_building,
+        r.floor AS room_floor
+      FROM bookings b
+      JOIN rooms r ON b.room_id = r.id
+      WHERE b.user_id = $1
+    `;
 
-    // Filter by status if provided
+    const queryParams: any[] = [useAuth().user?.id];
+    let paramIndex = 2;
+
     if (status) {
-      query = query.eq('status', status);
+      query += ` AND b.status = $${paramIndex}`;
+      queryParams.push(status);
+      paramIndex++;
     } else {
-      query = query.neq('status', 'cancelled');
+      query += ` AND b.status != 'cancelled'`;
     }
 
-    // Order by start_time descending (newest first)
-    query = query.order('start_time', { ascending: true });
+    query += ` ORDER BY b.start_time ASC`;
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching user bookings:', error);
-      throw error;
-    }
+    const { rows: data } = await pool.query(query, queryParams);
 
     // Transform the data to match our interface
     const transformedBookings: Booking[] = data.map(booking => ({
@@ -504,8 +465,8 @@ export const getUserBookings = async (status?: 'confirmed' | 'cancelled' | 'comp
       startTime: new Date(booking.start_time),
       endTime: new Date(booking.end_time),
       status: booking.status as 'confirmed' | 'cancelled' | 'pending' | 'completed',
-      roomName: booking.rooms?.name,
-      location: booking.rooms ? `${booking.rooms.building}, ${booking.rooms.floor}` : undefined
+      roomName: booking.room_name,
+      location: booking.room_building ? `${booking.room_building}, ${booking.room_floor}` : undefined
     }));
 
     return transformedBookings;
@@ -521,45 +482,52 @@ export const getUserBookings = async (status?: 'confirmed' | 'cancelled' | 'comp
  */
 export const getBookingById = async (bookingId: string): Promise<Booking> => {
   try {
-    const { data: booking, error } = await supabase
-      .from('bookings')
-      .select(`
-        id,
-        title,
-        description,
-        start_time,
-        end_time,
-        status,
-        room_id,
-        rooms (
-          name,
-          building,
-          floor
-        ),
-        booking_attendees (
-          user_id,
-          status,
-          users (
-            id,
-            email,
-            first_name,
-            last_name
-          )
-        )
-      `)
-      .eq('id', bookingId)
-      .single();
+    const { rows: bookingResult } = await pool.query(
+      `
+      SELECT 
+        b.id,
+        b.title,
+        b.description,
+        b.start_time,
+        b.end_time,
+        b.status,
+        b.room_id,
+        r.name AS room_name,
+        r.building AS room_building,
+        r.floor AS room_floor
+      FROM bookings b
+      JOIN rooms r ON b.room_id = r.id
+      WHERE b.id = $1
+    `,
+      [bookingId]
+    );
 
-    if (error) {
-      console.error('Error fetching booking details:', error);
-      throw error;
+    if (bookingResult.length === 0) {
+      throw new Error('Booking not found');
     }
 
+    const booking = bookingResult[0];
+
+    const { rows: attendeesResult } = await pool.query(
+      `
+      SELECT 
+        u.id,
+        u.email,
+        u.first_name,
+        u.last_name,
+        ba.status
+      FROM booking_attendees ba
+      JOIN users u ON ba.user_id = u.id
+      WHERE ba.booking_id = $1
+    `,
+      [bookingId]
+    );
+
     // Transform attendees data
-    const attendees = booking.booking_attendees?.map(attendee => ({
-      id: attendee.user_id,
-      email: attendee.users.email,
-      name: `${attendee.users.first_name || ''} ${attendee.users.last_name || ''}`.trim(),
+    const attendees = attendeesResult.map(attendee => ({
+      id: attendee.id,
+      email: attendee.email,
+      name: `${attendee.first_name || ''} ${attendee.last_name || ''}`.trim(),
       status: attendee.status as 'invited' | 'confirmed' | 'declined'
     })) || [];
 
@@ -572,8 +540,8 @@ export const getBookingById = async (bookingId: string): Promise<Booking> => {
       endTime: new Date(booking.end_time),
       status: booking.status as 'confirmed' | 'cancelled' | 'pending' | 'completed',
       attendees,
-      roomName: booking.rooms?.name,
-      location: booking.rooms ? `${booking.rooms.building}, ${booking.rooms.floor}` : undefined
+      roomName: booking.room_name,
+      location: booking.room_building ? `${booking.room_building}, ${booking.room_floor}` : undefined
     };
   } catch (error) {
     console.error('Error in getBookingById:', error);

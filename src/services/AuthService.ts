@@ -1,4 +1,3 @@
-
 import { User, UserRole } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import bcrypt from "bcryptjs";
@@ -32,14 +31,16 @@ const JWT_EXPIRES_IN = config.auth.jwtExpiresIn;
 
 // Generate JWT token
 const generateToken = (user: User): string => {
-  // Fix the JWT sign method to use the correct typing
+  // Using Buffer.from to convert string to Buffer for proper typing
+  const secretBuffer = Buffer.from(JWT_SECRET, 'utf-8');
+  
   return jwt.sign(
     { 
       id: user.id,
       email: user.email,
       role: user.role
     },
-    JWT_SECRET,
+    secretBuffer,
     { expiresIn: JWT_EXPIRES_IN }
   );
 };

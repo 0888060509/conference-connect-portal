@@ -1,8 +1,9 @@
 
-// This is a mock service - in a real application, this would connect to backend APIs
+// This is a notification service - in a real application, this would connect to backend APIs
 
 import { NotificationType } from "@/contexts/NotificationContext";
 import { Booking } from "@/components/bookings/PersonalBookings";
+import pool from "@/db/postgres";
 
 // Email notification service
 export const sendEmailNotification = async (
@@ -15,10 +16,21 @@ export const sendEmailNotification = async (
   console.log(`Subject: ${subject}`);
   console.log(`Body: ${body}`);
   
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  return true;
+  try {
+    // Log the email in the database for tracking
+    await pool.query(
+      'INSERT INTO email_notifications(recipient, subject, body, sent_at) VALUES($1, $2, $3, NOW())',
+      [to, subject, body]
+    );
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return true;
+  } catch (error) {
+    console.error('Error logging email:', error);
+    return true; // Still return true for demo purposes
+  }
 };
 
 // Calendar invite service
@@ -35,11 +47,22 @@ export const sendCalendarInvite = async (
   console.log(`End: ${booking.endTime}`);
   console.log(`Attendees: ${attendees.join(', ')}`);
   
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // Return mock calendar event URL
-  return `https://${calendarType}.calendar.com/event/${booking.id}`;
+  try {
+    // Log the calendar invite in the database
+    await pool.query(
+      'INSERT INTO calendar_invites(booking_id, calendar_type, organizer, attendees, created_at) VALUES($1, $2, $3, $4, NOW())',
+      [booking.id, calendarType, organizer, JSON.stringify(attendees)]
+    );
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Return mock calendar event URL
+    return `https://${calendarType}.calendar.com/event/${booking.id}`;
+  } catch (error) {
+    console.error('Error logging calendar invite:', error);
+    return `https://${calendarType}.calendar.com/event/${booking.id}`; // Still return URL for demo purposes
+  }
 };
 
 // Push notification service
@@ -55,10 +78,21 @@ export const sendPushNotification = async (
   console.log(`Body: ${body}`);
   console.log(`Data:`, data);
   
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 300));
-  
-  return true;
+  try {
+    // Log the push notification in the database
+    await pool.query(
+      'INSERT INTO push_notifications(user_id, title, body, data, sent_at) VALUES($1, $2, $3, $4, NOW())',
+      [userId, title, body, JSON.stringify(data || {})]
+    );
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    return true;
+  } catch (error) {
+    console.error('Error logging push notification:', error);
+    return true; // Still return true for demo purposes
+  }
 };
 
 // Schedule a reminder
@@ -79,26 +113,51 @@ export const scheduleReminder = async (
   console.log(`Channels: ${channels.join(', ')}`);
   console.log(`Will trigger in: ${Math.round(timeUntilReminder / 1000 / 60)} minutes`);
   
-  // For demo purposes, if the reminder is less than 10 seconds in the future,
-  // actually schedule it in the browser
-  if (timeUntilReminder > 0 && timeUntilReminder < 10000) {
-    setTimeout(() => {
-      console.log(`[REMINDER SERVICE] Triggering reminder for booking ${bookingId}`);
-      
-      // In a real app, this would trigger the actual notifications
-      if (channels.includes('in_app')) {
-        console.log(`[REMINDER SERVICE] Sending in-app notification`);
-      }
-      
-      if (channels.includes('email')) {
-        console.log(`[REMINDER SERVICE] Sending email notification`);
-      }
-      
-      if (channels.includes('push')) {
-        console.log(`[REMINDER SERVICE] Sending push notification`);
-      }
-    }, timeUntilReminder);
+  try {
+    // Log the reminder in the database
+    await pool.query(
+      'INSERT INTO scheduled_reminders(booking_id, user_id, reminder_time, title, message, channels) VALUES($1, $2, $3, $4, $5, $6)',
+      [bookingId, userId, reminderTime, title, message, JSON.stringify(channels)]
+    );
+    
+    // For demo purposes, if the reminder is less than 10 seconds in the future,
+    // actually schedule it in the browser
+    if (timeUntilReminder > 0 && timeUntilReminder < 10000) {
+      setTimeout(async () => {
+        console.log(`[REMINDER SERVICE] Triggering reminder for booking ${bookingId}`);
+        
+        // In a real app, this would trigger the actual notifications
+        if (channels.includes('in_app')) {
+          console.log(`[REMINDER SERVICE] Sending in-app notification`);
+          await pool.query(
+            'INSERT INTO notifications(user_id, type, message, booking_id, created_at) VALUES($1, $2, $3, $4, NOW())',
+            [userId, 'reminder', message, bookingId]
+          );
+        }
+        
+        if (channels.includes('email')) {
+          console.log(`[REMINDER SERVICE] Sending email notification`);
+          await sendEmailNotification(
+            `user-${userId}@example.com`, // In a real app, this would be the user's email
+            `Reminder: ${title}`,
+            message
+          );
+        }
+        
+        if (channels.includes('push')) {
+          console.log(`[REMINDER SERVICE] Sending push notification`);
+          await sendPushNotification(
+            userId,
+            `Reminder: ${title}`,
+            message
+          );
+        }
+      }, timeUntilReminder);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error scheduling reminder:', error);
+    return true; // Still return true for demo purposes
   }
-  
-  return true;
 };

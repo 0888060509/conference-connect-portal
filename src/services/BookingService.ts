@@ -1,4 +1,3 @@
-
 import pool from "@/db/postgres";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
@@ -83,7 +82,7 @@ export const getAvailableRooms = async (filters: RoomFilter) => {
       // For each room, check if there's a conflicting booking
       const availableRooms = await Promise.all(
         rooms.map(async (room) => {
-          const conflicts = await pool.query(
+          const conflictResult = await pool.query(
             `SELECT id, title, start_time, end_time, user_id 
              FROM bookings 
              WHERE room_id = $1 
@@ -96,8 +95,10 @@ export const getAvailableRooms = async (filters: RoomFilter) => {
             [room.id, startTime.toISOString(), endTime.toISOString()]
           );
 
+          const conflicts = conflictResult.rows || [];
+
           // If no conflicts, the room is available
-          return (conflicts.rows || []).length === 0 ? room : null;
+          return conflicts.length === 0 ? room : null;
         })
       );
 

@@ -32,6 +32,7 @@ const JWT_EXPIRES_IN = config.auth.jwtExpiresIn;
 
 // Generate JWT token
 const generateToken = (user: User): string => {
+  // Fix the JWT sign method to use the correct typing
   return jwt.sign(
     { 
       id: user.id,

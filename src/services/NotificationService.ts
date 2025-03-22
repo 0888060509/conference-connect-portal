@@ -1,9 +1,7 @@
-
 // This is a notification service - in a real application, this would connect to backend APIs
 
 import { NotificationType } from "@/contexts/NotificationContext";
 import { Booking } from "@/components/bookings/PersonalBookings";
-import pool from "@/db/postgres";
 
 // Email notification service
 export const sendEmailNotification = async (
@@ -17,11 +15,8 @@ export const sendEmailNotification = async (
   console.log(`Body: ${body}`);
   
   try {
-    // Log the email in the database for tracking
-    await pool.query(
-      'INSERT INTO email_notifications(recipient, subject, body, sent_at) VALUES($1, $2, $3, NOW())',
-      [to, subject, body]
-    );
+    // Log the email (in a real app, this would be sent to the server)
+    console.log('Email notification logged');
     
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -48,11 +43,8 @@ export const sendCalendarInvite = async (
   console.log(`Attendees: ${attendees.join(', ')}`);
   
   try {
-    // Log the calendar invite in the database
-    await pool.query(
-      'INSERT INTO calendar_invites(booking_id, calendar_type, organizer, attendees, created_at) VALUES($1, $2, $3, $4, NOW())',
-      [booking.id, calendarType, organizer, JSON.stringify(attendees)]
-    );
+    // Log the calendar invite (in a real app, this would be sent to the server)
+    console.log('Calendar invite logged');
     
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 800));

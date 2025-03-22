@@ -70,7 +70,8 @@ export const getAvailableRooms = async (filters: RoomFilter) => {
       paramIndex++;
     }
 
-    const { rows: rooms } = await pool.query(query, queryParams);
+    const result = await pool.query(query, queryParams);
+    const rooms = result.rows || [];
 
     // If date and time filters are provided, filter out rooms with conflicting bookings
     if (filters.date && filters.startTime && filters.endTime) {
@@ -81,7 +82,7 @@ export const getAvailableRooms = async (filters: RoomFilter) => {
       // For each room, check if there's a conflicting booking
       const availableRooms = await Promise.all(
         rooms.map(async (room) => {
-          const { rows: conflicts } = await pool.query(
+          const conflicts = await pool.query(
             `SELECT id, title, start_time, end_time, user_id 
              FROM bookings 
              WHERE room_id = $1 
@@ -95,7 +96,7 @@ export const getAvailableRooms = async (filters: RoomFilter) => {
           );
 
           // If no conflicts, the room is available
-          return conflicts.length === 0 ? room : null;
+          return (conflicts.rows || []).length === 0 ? room : null;
         })
       );
 
@@ -203,7 +204,7 @@ export const createBooking = async (bookingData: BookingFormData, userId: string
     const endDateTime = new Date(`${bookingData.date.toISOString().split('T')[0]}T${bookingData.endTime}`);
     
     // Insert the booking
-    const { rows: [booking] } = await pool.query(
+    const result = await pool.query(
       `INSERT INTO bookings (
         room_id, 
         title, 
@@ -225,17 +226,23 @@ export const createBooking = async (bookingData: BookingFormData, userId: string
         userId
       ]
     );
+    
+    const booking = result.rows ? result.rows[0] : null;
+    if (!booking) {
+      throw new Error('Failed to create booking');
+    }
 
     // If there are attendees, add them to the booking_attendees table
     if (bookingData.attendees && bookingData.attendees.length > 0) {
       // First, lookup the user IDs for the email addresses
-      const { rows: users } = await pool.query(
+      const usersResult = await pool.query(
         `SELECT id, email, first_name, last_name 
          FROM users 
          WHERE email = ANY($1)`,
         [bookingData.attendees]
       );
 
+      const users = usersResult.rows || [];
       if (users && users.length > 0) {
         // Create attendee records for each user
         const attendeeValues = users.map(user => 
@@ -250,12 +257,14 @@ export const createBooking = async (bookingData: BookingFormData, userId: string
     }
 
     // Get room details to include in the response
-    const { rows: [room] } = await pool.query(
+    const roomResult = await pool.query(
       `SELECT name, building, floor 
        FROM rooms 
        WHERE id = $1`,
       [bookingData.roomId]
     );
+
+    const room = roomResult.rows ? roomResult.rows[0] : null;
 
     toast.success('Booking created successfully');
 

@@ -1,13 +1,33 @@
 
-import pool from "@/db/postgres";
 import { User, UserRole } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { config } from "@/config";
+
+// Mock users for development (in a real app, these would come from an API)
+const MOCK_USERS = [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    email: 'admin@example.com',
+    password: '$2a$10$KVfLF.mH8z1CWwXZd2HTe.Y.zRLMLDY7RB0JoK3Mtc7.vEKdpkzE2', // hashed 'password'
+    first_name: 'Admin',
+    last_name: 'User',
+    role: 'admin' as UserRole
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    email: 'user@example.com',
+    password: '$2a$10$KVfLF.mH8z1CWwXZd2HTe.Y.zRLMLDY7RB0JoK3Mtc7.vEKdpkzE2', // hashed 'password'
+    first_name: 'Regular',
+    last_name: 'User',
+    role: 'user' as UserRole
+  }
+];
 
 // JWT secret key (in production, use environment variables)
-const JWT_SECRET = "meetly_jwt_secret_key";
-const JWT_EXPIRES_IN = "7d";
+const JWT_SECRET = config.auth.jwtSecret;
+const JWT_EXPIRES_IN = config.auth.jwtExpiresIn;
 
 // Generate JWT token
 const generateToken = (user: User): string => {
@@ -31,23 +51,19 @@ export const verifyToken = async (token: string): Promise<User | null> => {
       role: UserRole;
     };
     
-    const result = await pool.query(
-      'SELECT id, email, first_name, last_name, role, department FROM users WHERE id = $1',
-      [decoded.id]
-    );
+    // Find user from mock data (in a real app, this would query the database)
+    const mockUser = MOCK_USERS.find(u => u.id === decoded.id);
     
-    if (result.rows.length === 0) {
+    if (!mockUser) {
       return null;
     }
     
-    const user = result.rows[0];
-    
     return {
-      id: user.id,
-      email: user.email,
-      name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-      role: user.role as UserRole,
-      department: user.department
+      id: mockUser.id,
+      email: mockUser.email,
+      name: `${mockUser.first_name || ''} ${mockUser.last_name || ''}`.trim(),
+      role: mockUser.role,
+      department: 'Development' // Mock department
     };
   } catch (error) {
     console.error("Error verifying token:", error);
@@ -58,35 +74,29 @@ export const verifyToken = async (token: string): Promise<User | null> => {
 // Login user
 export const login = async (email: string, password: string): Promise<{ user: User, token: string } | null> => {
   try {
-    const result = await pool.query(
-      'SELECT id, email, password, first_name, last_name, role, department FROM users WHERE email = $1',
-      [email]
-    );
+    // Find user from mock data (in a real app, this would query the database)
+    const mockUser = MOCK_USERS.find(u => u.email === email);
     
-    if (result.rows.length === 0) {
+    if (!mockUser) {
       throw new Error("Invalid email or password");
     }
     
-    const user = result.rows[0];
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await bcrypt.compare(password, mockUser.password);
     
     if (!isValidPassword) {
       throw new Error("Invalid email or password");
     }
     
     const userData: User = {
-      id: user.id,
-      email: user.email,
-      name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-      role: user.role as UserRole,
-      department: user.department
+      id: mockUser.id,
+      email: mockUser.email,
+      name: `${mockUser.first_name || ''} ${mockUser.last_name || ''}`.trim(),
+      role: mockUser.role,
+      department: 'Development' // Mock department
     };
     
-    // Update last login timestamp
-    await pool.query(
-      'UPDATE users SET last_login = NOW() WHERE id = $1',
-      [user.id]
-    );
+    // In a real app, this would update the database
+    console.log(`User ${userData.email} logged in at ${new Date().toISOString()}`);
     
     const token = generateToken(userData);
     

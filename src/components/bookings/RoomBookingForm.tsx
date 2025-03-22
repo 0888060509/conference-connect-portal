@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useForm } from "react-hook-form";
@@ -20,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BookingFormData, createBooking } from "@/services/BookingService";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RoomBookingFormProps {
   roomId: string;
@@ -40,6 +40,9 @@ export function RoomBookingForm({
 }: RoomBookingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  const { user } = useAuth();
+  const userId = user?.id || '';
+
   // Generate time options from 8:00 to 20:00
   const timeOptions = Array.from({ length: 25 }, (_, i) => {
     const hour = 8 + Math.floor(i / 2);
@@ -69,7 +72,7 @@ export function RoomBookingForm({
         return;
       }
 
-      const booking = await createBooking(data);
+      const booking = await createBooking(data, userId);
       
       toast.success(`Room ${roomName} booked successfully`);
       
